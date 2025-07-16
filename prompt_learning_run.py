@@ -257,7 +257,7 @@ There are 3 steps to every loop of optimization.
 This process repeats until we see good results on the test set. In this case, we measure our results to be satisfactory when all outputs are deemed "correct" by the evaluate_output evaluator we defined above.
 """
 
-from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+from optimizer_sdk.prompt_learning_optimizer import PromptLearningOptimizer
 
 num_rules = NUM_RULES  # Use config value from top of file
 
@@ -355,7 +355,7 @@ def optimize_loop(
         train_set["explanation"] = [None] * len(train_set)
         train_set["rule_violations"] = [None] * len(train_set)
 
-        optimizer = MetaPromptOptimizer(
+        optimizer = PromptLearningOptimizer(
             prompt=system_prompt,
             model_choice="gpt-4o",
             openai_api_key=os.getenv("OPENAI_API_KEY")

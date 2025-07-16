@@ -99,7 +99,7 @@ Prompt-Learning/
 ├── notebooks/             # Jupyter notebooks for experiments      
 │   └── prompt_learning_cookbook_AX.ipynb
 ├── meta_prompt.py         # Core meta-prompt implementation
-├── meta_prompt_optimizer.py # Meta-prompt optimizer
+├── prompt_learning_optimizer.py # Prompt learning optimizer
 ├── prompt_learning_run.py # Main experiment runner
 ├── tiktoken_splitter.py   # Token counting utilities
 ├── train.csv              # Training dataset
@@ -126,7 +126,7 @@ export OPENAI_API_KEY="your-api-key-here"
 
 ```python
 import pandas as pd
-from meta_prompt_optimizer import MetaPromptOptimizer
+from arize_toolkit.extensions.prompt_optimizer import PromptLearningOptimizer
 
 # Create dataset with English feedback
 dataset = pd.DataFrame({
@@ -136,7 +136,7 @@ dataset = pd.DataFrame({
 })
 
 # Initialize optimizer
-optimizer = MetaPromptOptimizer(
+optimizer = PromptLearningOptimizer(
     prompt="You are an expert in JSON webpage creation. Generate: {input}",
     model_choice="gpt-4"
 )
