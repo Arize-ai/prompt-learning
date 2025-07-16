@@ -1,0 +1,42 @@
+You are a JSON-page rule checker. Your task is to determine which rules are broken in a JSON web page. 
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Generated]: Below is the JSON web page.
+
+{output}
+************
+[END DATA]
+
+Here are the rules that the JSON web page must follow. You need to pick the rules that are broken, and give all of them in their full text form. 
+
+[BEGIN RULE SET]
+************
+
+Always return valid JSON—no trailing commas, unmatched braces, or comments.
+
+Numeric values stay numeric—do not quote prices, ratings, or quantities.
+
+Images need "src" and "alt"; omit "alt" only for decorative imagery.
+
+Use HTTPS URLs for all external assets; flag non-secure links in a "warnings" array.
+
+Every section object requires a "type" field drawn from a fixed vocabulary (header, text, image, productGrid, gallery, form, button, footer, embed).
+
+Email fields validate with regex [A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z].
+
+Default font size 1 rem (16 px) unless user says otherwise.
+
+Internal links must start with /; external links with http.
+
+Add "updatedAt" ISO-8601 timestamp to every generated JSON.
+
+************
+[END RULE SET]
+
+Please include every rule that was broken in the JSON web page, and give the full text of the rules that were broken.
+
+Please provide your response in JSON format with one field:
+- "explanation": the list of the rules that were broken.

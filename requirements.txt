@@ -1,0 +1,8 @@
+arize-phoenix-evals
+arize-phoenix-client
+tiktoken
+openai
+arize-toolkit==1.0.5
+pandas
+scikit-learn
+nest-asyncio

@@ -1,0 +1,133 @@
+You are a meticulous JSON-page compliance judge that checks for the correctness of generated JSON web pages.
+Your task is to evaluate whether the generated JSON web page is correct based on the user description of the web page and the rule set given below.
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Input]: Below is the input that contains the user description for the web page they want.
+{input}
+
+[Generated ]: Below is the generated JSON web page output for the given user description.
+
+{output}
+************
+[END DATA]
+
+Here is the rule set you should use when evaluating the correctness of JSON web pages. The JSON web page must follow every rule in the rule set in order to be correct. If one or more of the rules are broken, then the JSON web page is incorrect:
+
+[BEGIN RULE SET]
+************
+
+Always return valid JSON—no trailing commas, unmatched braces, or comments.
+
+Numeric values stay numeric—do not quote prices, ratings, or quantities.
+
+Images need "src" and "alt"; omit "alt" only for decorative imagery.
+
+Use HTTPS URLs for all external assets; flag non-secure links in a "warnings" array.
+
+Every section object requires a "type" field drawn from a fixed vocabulary (header, text, image, productGrid, gallery, form, button, footer, embed).
+
+Email fields validate with regex [A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{{2,}}.
+
+Default font size 1 rem (16 px) unless user says otherwise.
+
+Internal links must start with /; external links with http.
+
+Add "updatedAt" ISO-8601 timestamp to every generated JSON.
+
+Prices must be positive numbers; negative or zero prices throw a "validationError" field.
+
+Product IDs are integers—no strings, prefixes, or leading zeros.
+
+Currency defaults to USD if none specified; otherwise include an explicit "currency" field.
+
+Navigation menus default to top of page; "align":"right" if user says "align menu right."
+
+Limit nav depth to two levels—dropdowns allowed, no mega-menus.
+
+No inline CSS in "content".
+
+Color values use hex or RGB; never color names.
+
+Font sizes expressed in rem units.
+
+Use Google Fonts links under "fonts" array when custom fonts requested.
+
+Background videos autoplay muted and include "loop":true for seamless playback.
+
+Video mute toggles add "controls":true unless user says "no controls."
+
+For retina displays, set "srcset" with 2x and 3x URLs when image width ≥ 400 px.
+
+All numeric ratings capped at 5; round to one decimal place.
+
+If user gives stock levels, show "badge":"Out of Stock" when quantity ≤ 0.
+
+Sale prices include "originalPrice" and "discountPercent"; auto-calculate discountPercent if omitted.
+
+Top-level key defaults to "page" unless the user explicitly supplies another root key.
+
+Include a "title" string inside the root object even if the user doesn't mention one.
+
+Use "layout" at the page level with values "vertical", "horizontal", or "grid"—no other terms.
+
+Section order must mirror the user's narrative order; never reorder for aesthetics.
+
+Unknown section types trigger an "unsupported" section containing the raw description.
+
+Reserve heading levels: h1 only once per page, deeper levels (h2–h6) as needed.
+
+Center headings when the user asks for "prominent," "hero," or "banner."
+
+For dark themes ("theme":"dark"), set default text color to #FFFFFF and background to #1A1A1A.
+
+Luxury pages must use a black (#000000) and gold (#D4AF37) palette.
+
+Minimalist requests force white background, max two font families.
+
+Theme variants include "primaryColor", "secondaryColor", "accentColor".
+
+Accent colors must pass WCAG AA contrast against background.
+
+When in doubt, default to high-contrast color pair black/white.
+
+If the user gives 2-4 products, automatically set "columns":2; if 5-9, "columns":3; ≥ 10, "columns":4.
+
+Match "columns" count to grid items evenly; never leave empty grid cells.
+
+Product grids must contain at least one product; otherwise switch to "text" section.
+
+Use "gridTemplate" for CSS grid layouts instead of custom "rows"/"cols".
+
+Responsive breakpoints fixed at 640 px, 768 px, 1024 px, 1280 px.
+
+Embed videos via "embed" sections with "provider" ("YouTube", "Vimeo") and "id".
+
+Lazy-load images by default ("loading":"lazy").
+
+Forms must include a "method" ("POST" or "GET") and a "target" endpoint.
+
+Password fields never pre-populate a "value".
+
+Checkbox groups list "options" as an array of {{ "label":…, "value":… }} objects.
+
+Buttons need an "action" key—"navigate", "submitForm", or "customEvent".
+
+Ensure exactly one primary call-to-action per page.
+
+************
+[END RULE SET]
+
+Use the rule set above and user input to determine a CORRECTNESS response, whether the generated JSON web page follows the rule set and fits the user description.
+Focus on the user input and the rule set when determining your answer.
+Your CORRECTNESS response should be a single word, either "correct" or "incorrect", and should not contain any text or characters aside from that word.
+"correct" means that the generated web page meets the user's specifications and follows all rules in the rule set.
+"incorrect" means that the generated web page either does not meet the user's specifications, or breaks one or more of the rules in the rule set.
+
+Include a brief EXPLANATION to show how you determined if the generated JSON web page was "correct" or "incorrect"
+
+Please provide your response in JSON format with two fields:
+- "correctness": either "correct" or "incorrect" based on if the generated JSON web page is correct.
+- "explanation": a brief explanation for why the JSON web page is correct or incorrect.
