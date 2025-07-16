@@ -238,16 +238,14 @@ If you use this research in your work, please cite:
 
 ## Contributing
 
-This is a research repository. For contributions:
+You can contribute to the optimizer sdk itself within the optimizer_sdk notebook. You can also add notebooks, datasets, or other additional material. 
 
 1. Create a new branch for your experiment
-2. Document your methodology in `research/notebooks/`
-3. Update this README with findings
-4. Submit a pull request
+2. Submit a pull request
 
 ## License
 
-[Add your license here]
+See LICENSE.txt
 
 ## Contact
 
