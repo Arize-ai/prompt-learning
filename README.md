@@ -72,12 +72,14 @@ We chose a JSON generation problem where models had to generate JSON for a webpa
 | 50 | 0% | 66% | 82% |
 | 100 | 0% | 42% | 67% |
 
+This is over a dataset of 100 webpage JSON queries. Accuracy is measured by number of query outputs (using the system prompt) following the entire ruleset. 
+
 ### Key Findings
 
-1. **Uncovers Latent Rules**: Prompt learning can uncover and address the majority of latent rules within the 5-25 ruleset range
-2. **Performance Stability**: As more rules are introduced, performance does not drop significantly
+1. **Single Loop Optimization**: Strong improvements in accuracy in just one loop of prompt optimization
+2. **Strong results with 5 loops**: In just 5 loops, we see strong results in prompt learning
 3. **Dramatic Improvement**: Prompt learning drastically outperforms un-optimized cases (near-zero baseline accuracy)
-4. **Cost Efficiency**: Achieves same level of improvements as reinforcement learning with one-tenth to one-hundredth the number of labeled examples
+4. **Cost Efficiency**: Low latency overall
 
 ## Repository Structure
 
