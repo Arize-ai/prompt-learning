@@ -66,11 +66,11 @@ We chose a JSON generation problem where models had to generate JSON for a webpa
 
 ### Table 1: Prompt Learning Performance
 
-| Ruleset Size | Test Accuracy - 1 loop| Test Accuracy - 5 loops |
+| Ruleset Size | Test Accuracy - Unoptimized Prompt Test Accuracy - 1 loop Optimization| Test Accuracy - 5 loops Optimization |
 |--------------|----------------|---------------|
-| 10 | 84% | 100% |
-| 50 | 66% | 82% |
-| 100 | 42% | 67% |
+| 10 | 0% | 84% | 100% |
+| 50 | 0% | 66% | 82% |
+| 100 | 0% | 42% | 67% |
 
 ### Key Findings
 
@@ -82,29 +82,25 @@ We chose a JSON generation problem where models had to generate JSON for a webpa
 ## Repository Structure
 
 ```
-Prompt-Learning/
-├── data/                   # Datasets and evaluation data
-│   ├── queries.csv        # Main dataset
-│   └── README.md          # Data documentation
+prompt-learning/
+├── optimizer_sdk/         # Core prompt learning SDK
+│   ├── meta_prompt.py         # Core meta-prompt implementation
+│   ├── prompt_learning_optimizer.py # Prompt learning optimizer
+│   ├── tiktoken_splitter.py   # Token counting utilities
+│   ├── constants.py           # Configuration constants
+│   └── utils.py              # Utility functions
 ├── prompts/               # Prompt templates for different rule counts
 │   ├── evaluator-prompt-10.txt
 │   ├── evaluator-prompt-50.txt
 │   ├── evaluator-prompt-100.txt
 │   ├── rule-checker-prompt-10.txt
 │   ├── rule-checker-prompt-50.txt
-│   ├── rule-checker-prompt-100.txt
-│   ├── metrics-prompt-10.txt
-│   ├── metrics-prompt-50.txt
-│   └── metrics-prompt-100.txt
+│   └── rule-checker-prompt-100.txt
 ├── notebooks/             # Jupyter notebooks for experiments      
-│   └── prompt_learning_cookbook_AX.ipynb
-├── meta_prompt.py         # Core meta-prompt implementation
-├── prompt_learning_optimizer.py # Prompt learning optimizer
+│   └── prompt_learning_cookbook.ipynb
 ├── prompt_learning_run.py # Main experiment runner
-├── tiktoken_splitter.py   # Token counting utilities
-├── train.csv              # Training dataset
-├── test.csv               # Test dataset
 ├── requirements.txt       # Python dependencies
+├── LICENSE.txt           # License file
 └── README.md             # This file
 ```
 
@@ -126,7 +122,7 @@ export OPENAI_API_KEY="your-api-key-here"
 
 ```python
 import pandas as pd
-from arize_toolkit.extensions.prompt_optimizer import PromptLearningOptimizer
+from optimizer_sdk.prompt_learning_optimizer import PromptLearningOptimizer
 
 # Create dataset with English feedback
 dataset = pd.DataFrame({
@@ -198,44 +194,6 @@ python prompt_learning_run.py
 | **Compute Cost** | Front-loaded (search); negligible at inference | Minimal upfront, <1 extra call per optimization |
 | **Interpretability** | Final prompt readable, reasoning hidden in search logs | Full audit trail: every instruction edit in plain English |
 
-## Literature Review
-
-### Relevant Approaches
-
-- **Promptbreeder (DeepMind)**: Prompt edits but no English critiques
-- **OPRO – "LLMs as Optimizers"**: Prompt edits but no English critiques  
-- **PromptAgent**: Uses free-form critiques but doesn't embed them in final prompt
-- **StablePrompt**: RL updates instead of prompt edits
-- **Meta-Prompting: Task-Agnostic Scaffolding**: First use of metaprompt but no English critiques
-- **Critic-RM**: Self-generated critiques for reward modeling
-- **Self-Refine**: Iterative refinement with self-feedback
-
-## Limitations and Future Work
-
-### Current Limitations
-- Requires structured English feedback
-- Limited to specific prompt sections
-- May not generalize to all domains
-
-### Future Directions
-- Integration with MCTS-based search (like PromptAgent)
-- Multi-modal feedback support
-- Cross-domain generalization
-- Advanced instruction management
-
-## Citation
-
-If you use this research in your work, please cite:
-
-```bibtex
-@misc{prompt_learning_2024,
-  title={Exploring Prompt Learning: Using English Feedback to Optimize LLM Systems},
-  author={[Your Name]},
-  year={2024},
-  url={https://github.com/PriyanJindal/meta-prompt-optimization}
-}
-```
-
 ## Contributing
 
 You can contribute to the optimizer sdk itself within the optimizer_sdk notebook. You can also add notebooks, datasets, or other additional material. 
@@ -249,6 +207,6 @@ See LICENSE.txt
 
 ## Contact
 
-For questions about the research, contact: [Your Email]
+For questions about the research, contact: pjindal@arize.com
 
 

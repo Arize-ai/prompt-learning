@@ -18,10 +18,10 @@ In this cookbook, we demonstrate a use case of the Arize Prompt Learning SDK by 
 # CONFIG: Number of samples to use for the experiment. Adjust as needed.
 NUM_SAMPLES = 100  # Number of rows to sample from the full dataset, 0 for all
 TRAIN_SPLIT_FRACTION = 0.5  # Fraction of data to use for training (rest for testing)
-NUM_RULES = 50  # Number of rules in the prompt - adjust based on your evaluator prompt (this is NOT working on Config)
+NUM_RULES = 100  # Number of rules in the prompt - adjust based on your evaluator prompt (this is NOT working on Config)
 
 # EXPERIMENT CONFIGURATION
-RUN_MULTI_RULE_EXPERIMENTS = False  # Set to True to run experiments with multiple rule counts
+RUN_MULTI_RULE_EXPERIMENTS = True  # Set to True to run experiments with multiple rule counts
 RULE_COUNTS_TO_TEST = [10, 50, 100]  # Rule counts to test in multi-rule experiments
 NUM_OPTIMIZATION_LOOPS = 5  # Number of optimization loops per experiment
 
@@ -42,6 +42,7 @@ NUM_OPTIMIZATION_LOOPS = 5  # Number of optimization loops per experiment
 #    - Set NUM_OPTIMIZATION_LOOPS to control how many iterations per experiment
 
 import nest_asyncio, re
+import time
 nest_asyncio.apply()
 
 # 1️⃣  stricter variable detector
@@ -305,9 +306,12 @@ def optimize_loop(
             "prompt": list of system prompts used for each test run
             "raw": list of test set DataFrames (deepcopy) for each test run
             "num_rules": number of rules used for this experiment
+            "latency": dict with timing information
     """
     import copy
 
+    # Initialize timing data
+    experiment_start_time = time.time()   
     curr_loop = 1
     train_metrics = []
     test_metrics = []
@@ -416,25 +420,32 @@ def optimize_loop(
         # 3. Check threshold
         if metric_value >= threshold:
             print(f"🎉 Threshold reached! Stopping optimization.")
+            experiment_total_time = time.time() - experiment_start_time
+            print(f"🕒 Experiment total time: {experiment_total_time:.2f}s")
             result = {
                 "train": train_metrics,
                 "test": test_metrics,
                 "prompt": prompts,
                 "raw": raw_dfs,
-                "num_rules": num_rules
+                "num_rules": num_rules,
+                "experiment_total_time": experiment_total_time
             }
+            
             return result
 
         loops -= 1
         curr_loop += 1
 
+    experiment_total_time = time.time() - experiment_start_time
     print(f"🔄 All {curr_loop-1} optimization loops completed.")
+    print(f"🕒 Experiment total time: {experiment_total_time:.2f}s")
     result = {
         "train": train_metrics,
         "test": test_metrics,
         "prompt": prompts,
         "raw": raw_dfs,
-        "num_rules": num_rules
+        "num_rules": num_rules,
+        "experiment_total_time": experiment_total_time,
     }
     return result
 
@@ -498,6 +509,7 @@ def save_single_experiment_csv(results, filename):
     train_metrics = results.get('train', [])
     test_metrics = results['test']
     prompts = results['prompt']
+    experiment_total_time = results['experiment_total_time']
     
     # Create DataFrame
     data = []
@@ -506,7 +518,8 @@ def save_single_experiment_csv(results, filename):
             'iteration': i,
             'num_rules': num_rules,
             'test_accuracy': test_metric,
-            'prompt': prompt
+            'prompt': prompt,
+            'experiment_total_time': experiment_total_time
         }
         
         # Add train metric if available
@@ -547,7 +560,7 @@ def run_multi_rule_experiments(
     test_set,
     system_prompt,
     rule_counts=[10, 50, 100],
-    threshold=0.7,
+    threshold=1,
     loops=5,
     scorer="accuracy"
 ):

@@ -1,0 +1,293 @@
+iteration,num_rules,test_accuracy,prompt,experiment_total_time,train_accuracy
+0,100,0.0,You are an expert in JSON webpage creation. This is your task: {input},1294.2670967578888,0.34
+1,100,0.28,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}. 
+
+Please ensure the JSON adheres to the following guidelines:
+
+1. **Root Key**: The top-level key should default to 'page' unless specified otherwise.
+2. **Layout**: Include a 'layout' key at the page level with values 'vertical', 'horizontal', or 'grid'.
+3. **Sections**: Each section must have a 'type' field drawn from a fixed vocabulary.
+4. **Forms**: Ensure forms include 'method' and 'target' fields. Buttons within forms should have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+5. **Timestamps**: Include an 'updatedAt' ISO-8601 timestamp for every generated JSON.
+6. **Footer**: Ensure the footer includes 'links' and 'legal' arrays, even if they are empty.
+7. **Data Types**: Ensure numeric values are not quoted as strings.
+8. **Meta Information**: Include a 'meta' object with Open Graph tags if images are present.
+
+Here is an example of a JSON structure that follows these guidelines:
+
+```json
+{
+  ""page"": {
+    ""title"": ""Sample Page"",
+    ""layout"": ""vertical"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": ""Welcome to the Sample Page""
+      },
+      {
+        ""type"": ""form"",
+        ""method"": ""POST"",
+        ""target"": ""/submit"",
+        ""fields"": [
+          {
+            ""type"": ""text"",
+            ""name"": ""username"",
+            ""label"": ""Username"",
+            ""required"": true
+          }
+        ],
+        ""submit"": {
+          ""type"": ""button"",
+          ""text"": ""Submit"",
+          ""action"": ""submitForm""
+        }
+      }
+    ],
+    ""footer"": {
+      ""links"": [],
+      ""legal"": []
+    },
+    ""updatedAt"": ""2023-10-01T12:00:00Z""
+  }
+}
+```
+
+Please ensure your JSON output is correct and complete based on these guidelines.",1294.2670967578888,0.5
+2,100,0.36,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}.
+
+Please ensure the JSON adheres to the following guidelines:
+
+1. **Root Key**: The top-level key should default to 'page' unless specified otherwise.
+2. **Layout**: Include a 'layout' key at the page level with values 'vertical', 'horizontal', or 'grid'.
+3. **Sections**: Each section must have a 'type' field drawn from a fixed vocabulary. If an unsupported section type is needed, use 'unsupported' and include the raw description for troubleshooting.
+4. **Forms**: Ensure forms include 'method' and 'target' fields. Buttons within forms should have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+5. **Timestamps**: Include an 'updatedAt' ISO-8601 timestamp for every generated JSON.
+6. **Footer**: Ensure the footer includes 'links' and 'legal' arrays, even if they are empty. Legal pages must be linked in the footer 'links'.
+7. **Data Types**: Ensure numeric values are not quoted as strings.
+8. **Meta Information**: Include a 'meta' object with Open Graph tags if images are present. Ensure 'og:image' and 'og:description' are included when an image is present.
+9. **Images**: All images must have 'src' and 'alt' attributes unless they are decorative.
+10. **Accessibility**: Ensure all interactive elements have 'ariaLabel' for accessibility compliance.
+11. **Consistency**: Ensure the section order mirrors the user's narrative order.
+
+Here is an example of a JSON structure that follows these guidelines:
+
+```json
+{
+  ""page"": {
+    ""title"": ""Sample Page"",
+    ""layout"": ""vertical"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": ""Welcome to the Sample Page""
+      },
+      {
+        ""type"": ""form"",
+        ""method"": ""POST"",
+        ""target"": ""/submit"",
+        ""fields"": [
+          {
+            ""type"": ""text"",
+            ""name"": ""username"",
+            ""label"": ""Username"",
+            ""required"": true
+          }
+        ],
+        ""submit"": {
+          ""type"": ""button"",
+          ""text"": ""Submit"",
+          ""action"": ""submitForm""
+        }
+      }
+    ],
+    ""footer"": {
+      ""links"": [],
+      ""legal"": []
+    },
+    ""updatedAt"": ""2023-10-01T12:00:00Z""
+  }
+}
+```
+
+Please ensure your JSON output is correct and complete based on these guidelines.",1294.2670967578888,0.36
+3,100,0.22,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}.
+
+Please ensure the JSON adheres to the following guidelines:
+
+1. **Root Key**: The top-level key should default to 'page' unless specified otherwise.
+2. **Layout**: Include a 'layout' key at the page level with values 'vertical', 'horizontal', or 'grid'.
+3. **Sections**: Each section must have a 'type' field drawn from a fixed vocabulary. If an unsupported section type is needed, use 'unsupported' and include the raw description for troubleshooting.
+4. **Forms**: Ensure forms include 'method' and 'target' fields. Buttons within forms should have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+5. **Timestamps**: Include an 'updatedAt' ISO-8601 timestamp for every generated JSON.
+6. **Footer**: Ensure the footer includes 'links' and 'legal' arrays, even if they are empty. Legal pages must be linked in the footer 'links'.
+7. **Data Types**: Ensure numeric values are not quoted as strings.
+8. **Meta Information**: Include a 'meta' object with Open Graph tags if images are present. Ensure 'og:image' and 'og:description' are included when an image is present.
+9. **Images**: All images must have 'src' and 'alt' attributes unless they are decorative.
+10. **Accessibility**: Ensure all interactive elements have 'ariaLabel' for accessibility compliance.
+11. **Consistency**: Ensure the section order mirrors the user's narrative order.
+12. **Carousel Sections**: If a carousel is used, include 'autoplay' and 'interval' keys.
+13. **Blog Posts**: Nest blog posts under a 'posts' key and ensure dates are formatted as YYYY-MM-DD.
+14. **Grid Sections**: Specify 'columns' for grid sections, especially when displaying multiple items.
+
+Here is an example of a JSON structure that follows these guidelines:
+
+```json
+{
+  ""page"": {
+    ""title"": ""Sample Page"",
+    ""layout"": ""vertical"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": ""Welcome to the Sample Page""
+      },
+      {
+        ""type"": ""form"",
+        ""method"": ""POST"",
+        ""target"": ""/submit"",
+        ""fields"": [
+          {
+            ""type"": ""text"",
+            ""name"": ""username"",
+            ""label"": ""Username"",
+            ""required"": true
+          }
+        ],
+        ""submit"": {
+          ""type"": ""button"",
+          ""text"": ""Submit"",
+          ""action"": ""submitForm""
+        }
+      }
+    ],
+    ""footer"": {
+      ""links"": [],
+      ""legal"": []
+    },
+    ""updatedAt"": ""2023-10-01T12:00:00Z""
+  }
+}
+```
+
+Please ensure your JSON output is correct and complete based on these guidelines.",1294.2670967578888,0.26
+4,100,0.24,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}.
+
+Please ensure the JSON adheres to the following guidelines:
+
+1. **Root Key**: The top-level key should default to 'page' unless specified otherwise.
+2. **Layout**: Include a 'layout' key at the page level with values 'vertical', 'horizontal', or 'grid'.
+3. **Sections**: Each section must have a 'type' field drawn from a fixed vocabulary: 'header', 'text', 'image', 'productGrid', 'gallery', 'form', 'button', 'footer', 'embed'. If an unsupported section type is needed, use 'unsupported' and include the raw description for troubleshooting.
+4. **Forms**: Ensure forms include 'method' and 'target' fields. Buttons within forms should have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+5. **Timestamps**: Include an 'updatedAt' ISO-8601 timestamp for every generated JSON.
+6. **Footer**: Ensure the footer includes 'links' and 'legal' arrays, even if they are empty. Legal pages must be linked in the footer 'links'.
+7. **Data Types**: Ensure numeric values are not quoted as strings.
+8. **Meta Information**: Include a 'meta' object with Open Graph tags if images are present. Ensure 'og:image' and 'og:description' are included when an image is present.
+9. **Images**: All images must have 'src' and 'alt' attributes unless they are decorative.
+10. **Accessibility**: Ensure all interactive elements have 'ariaLabel' for accessibility compliance.
+11. **Consistency**: Ensure the section order mirrors the user's narrative order.
+12. **Carousel Sections**: If a carousel is used, include 'autoplay' and 'interval' keys.
+13. **Blog Posts**: Nest blog posts under a 'posts' key and ensure dates are formatted as YYYY-MM-DD.
+14. **Grid Sections**: Specify 'columns' for grid sections, especially when displaying multiple items. Ensure the 'columns' count matches the number of items evenly.
+
+Here is an example of a JSON structure that follows these guidelines:
+
+```json
+{
+  ""page"": {
+    ""title"": ""Sample Page"",
+    ""layout"": ""vertical"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": ""Welcome to the Sample Page""
+      },
+      {
+        ""type"": ""form"",
+        ""method"": ""POST"",
+        ""target"": ""/submit"",
+        ""fields"": [
+          {
+            ""type"": ""text"",
+            ""name"": ""username"",
+            ""label"": ""Username"",
+            ""required"": true
+          }
+        ],
+        ""submit"": {
+          ""type"": ""button"",
+          ""text"": ""Submit"",
+          ""action"": ""submitForm""
+        }
+      }
+    ],
+    ""footer"": {
+      ""links"": [],
+      ""legal"": []
+    },
+    ""updatedAt"": ""2023-10-01T12:00:00Z""
+  }
+}
+```
+
+Please ensure your JSON output is correct and complete based on these guidelines.",1294.2670967578888,0.32
+5,100,0.28,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}.
+
+Please ensure the JSON adheres to the following guidelines:
+
+1. **Root Key**: The top-level key should default to 'page' unless specified otherwise.
+2. **Layout**: Include a 'layout' key at the page level with values 'vertical', 'horizontal', or 'grid'.
+3. **Sections**: Each section must have a 'type' field drawn from a fixed vocabulary: 'header', 'text', 'image', 'productGrid', 'gallery', 'form', 'button', 'footer', 'embed'. If an unsupported section type is needed, use 'unsupported' and include the raw description for troubleshooting.
+4. **Forms**: Ensure forms include 'method' and 'target' fields. Buttons within forms should have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+5. **Timestamps**: Include an 'updatedAt' ISO-8601 timestamp for every generated JSON.
+6. **Footer**: Ensure the footer includes 'links' and 'legal' arrays, even if they are empty. Legal pages must be linked in the footer 'links'.
+7. **Data Types**: Ensure numeric values are not quoted as strings.
+8. **Meta Information**: Include a 'meta' object with Open Graph tags if images are present. Ensure 'og:image' and 'og:description' are included when an image is present.
+9. **Images**: All images must have 'src' and 'alt' attributes unless they are decorative. Use 'loading': 'lazy' for lazy-loading images by default.
+10. **Accessibility**: Ensure all interactive elements have 'ariaLabel' for accessibility compliance.
+11. **Consistency**: Ensure the section order mirrors the user's narrative order.
+12. **Carousel Sections**: If a carousel is used, include 'autoplay' and 'interval' keys. For testimonial carousels, set 'loop': false unless specified otherwise.
+13. **Blog Posts**: Nest blog posts under a 'posts' key and ensure dates are formatted as YYYY-MM-DD. Include an 'id' field for each post.
+14. **Grid Sections**: Specify 'columns' for grid sections, especially when displaying multiple items. Ensure the 'columns' count matches the number of items evenly. For 2-4 items, set 'columns': 2.
+
+Here is an example of a JSON structure that follows these guidelines:
+
+```json
+{
+  ""page"": {
+    ""title"": ""Sample Page"",
+    ""layout"": ""vertical"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": ""Welcome to the Sample Page""
+      },
+      {
+        ""type"": ""form"",
+        ""method"": ""POST"",
+        ""target"": ""/submit"",
+        ""fields"": [
+          {
+            ""type"": ""text"",
+            ""name"": ""username"",
+            ""label"": ""Username"",
+            ""required"": true
+          }
+        ],
+        ""submit"": {
+          ""type"": ""button"",
+          ""text"": ""Submit"",
+          ""action"": ""submitForm""
+        }
+      }
+    ],
+    ""footer"": {
+      ""links"": [],
+      ""legal"": []
+    },
+    ""updatedAt"": ""2023-10-01T12:00:00Z""
+  }
+}
+```
+
+Please ensure your JSON output is correct and complete based on these guidelines.",1294.2670967578888,

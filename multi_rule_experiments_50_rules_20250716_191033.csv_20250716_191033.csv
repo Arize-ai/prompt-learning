@@ -1,0 +1,436 @@
+iteration,num_rules,test_accuracy,prompt,experiment_total_time,train_accuracy
+0,50,0.0,You are an expert in JSON webpage creation. This is your task: {input},1150.4530069828033,0.62
+1,50,0.6,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}. 
+
+Please ensure the following guidelines are met:
+
+1. Every JSON output must include an 'updatedAt' field with an ISO-8601 timestamp.
+2. Use 'page' as the top-level key unless another root key is explicitly provided.
+3. Include a 'layout' field at the page level with values 'vertical', 'horizontal', or 'grid'.
+4. Ensure all sections have a 'type' field drawn from the fixed vocabulary: 'header', 'text', 'image', 'productGrid', 'gallery', 'form', 'button', 'footer', or 'embed'.
+5. For forms, include 'method' and 'target' fields.
+6. All buttons must have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+7. Images must have 'src' and 'alt' attributes unless they are decorative.
+8. Prices should be numeric values without quotes.
+9. Internal links must start with '/'.
+
+Example:
+
+Input: Design a landing page for a book with an overview section, testimonials from three readers, a 'Buy Now' button, and a section at the end for author biography and social media links.
+
+Output:
+```json
+{
+  ""page"": {
+    ""title"": ""Book Landing Page"",
+    ""layout"": ""vertical"",
+    ""updatedAt"": ""2024-01-01T12:00:00Z"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": {
+          ""title"": ""The Art of Stillness"",
+          ""subtitle"": ""Discover the Power of Stillness""
+        }
+      },
+      {
+        ""type"": ""overview"",
+        ""content"": ""In 'The Art of Stillness', acclaimed author Jane Doe invites readers to slow down and embrace the present moment...""
+      },
+      {
+        ""type"": ""testimonials"",
+        ""content"": [
+          {
+            ""name"": ""Emily R."",
+            ""quote"": ""This book changed my life. I finally learned how to quiet my mind and find joy in everyday moments.""
+          },
+          {
+            ""name"": ""Michael T."",
+            ""quote"": ""A beautifully written guide to mindfulness. The exercises are simple yet powerful.""
+          },
+          {
+            ""name"": ""Sofia L."",
+            ""quote"": ""Jane Doe's wisdom shines through every page. Highly recommended for anyone seeking peace.""
+          }
+        ]
+      },
+      {
+        ""type"": ""button"",
+        ""action"": ""navigate"",
+        ""text"": ""Buy Now"",
+        ""url"": ""https://bookstore.com/the-art-of-stillness""
+      },
+      {
+        ""type"": ""authorBio"",
+        ""content"": {
+          ""name"": ""Jane Doe"",
+          ""bio"": ""Jane Doe is a bestselling author, meditation teacher, and speaker..."",
+          ""socialLinks"": [
+            {
+              ""platform"": ""Twitter"",
+              ""url"": ""https://twitter.com/janedoe""
+            },
+            {
+              ""platform"": ""Instagram"",
+              ""url"": ""https://instagram.com/janedoe""
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+Ensure your JSON output adheres to these guidelines for correctness and completeness.",1150.4530069828033,0.64
+2,50,0.64,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}.
+
+Please ensure the following guidelines are met:
+
+1. Every JSON output must include an 'updatedAt' field with an ISO-8601 timestamp.
+2. Use 'page' as the top-level key unless another root key is explicitly provided.
+3. Include a 'layout' field at the page level with values 'vertical', 'horizontal', or 'grid'.
+4. Ensure all sections have a 'type' field drawn from the fixed vocabulary: 'header', 'text', 'image', 'productGrid', 'gallery', 'form', 'button', 'footer', or 'embed'.
+5. For forms, include 'method' and 'target' fields.
+6. All buttons must have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+7. Images must have 'src' and 'alt' attributes unless they are decorative.
+8. Prices should be numeric values without quotes.
+9. Internal links must start with '/'.
+10. Ensure that all URLs are secure (HTTPS).
+11. Specify 'columns' in 'productGrid' sections when applicable, based on the number of items.
+12. Use 'loading': 'lazy' for images to optimize loading times.
+
+Example:
+
+Input: Design a landing page for a book with an overview section, testimonials from three readers, a 'Buy Now' button, and a section at the end for author biography and social media links.
+
+Output:
+```json
+{
+  ""page"": {
+    ""title"": ""Book Landing Page"",
+    ""layout"": ""vertical"",
+    ""updatedAt"": ""2024-01-01T12:00:00Z"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": {
+          ""title"": ""The Art of Stillness"",
+          ""subtitle"": ""Discover the Power of Stillness""
+        }
+      },
+      {
+        ""type"": ""overview"",
+        ""content"": ""In 'The Art of Stillness', acclaimed author Jane Doe invites readers to slow down and embrace the present moment...""
+      },
+      {
+        ""type"": ""testimonials"",
+        ""content"": [
+          {
+            ""name"": ""Emily R."",
+            ""quote"": ""This book changed my life. I finally learned how to quiet my mind and find joy in everyday moments.""
+          },
+          {
+            ""name"": ""Michael T."",
+            ""quote"": ""A beautifully written guide to mindfulness. The exercises are simple yet powerful.""
+          },
+          {
+            ""name"": ""Sofia L."",
+            ""quote"": ""Jane Doe's wisdom shines through every page. Highly recommended for anyone seeking peace.""
+          }
+        ]
+      },
+      {
+        ""type"": ""button"",
+        ""action"": ""navigate"",
+        ""text"": ""Buy Now"",
+        ""url"": ""https://bookstore.com/the-art-of-stillness""
+      },
+      {
+        ""type"": ""authorBio"",
+        ""content"": {
+          ""name"": ""Jane Doe"",
+          ""bio"": ""Jane Doe is a bestselling author, meditation teacher, and speaker..."",
+          ""socialLinks"": [
+            {
+              ""platform"": ""Twitter"",
+              ""url"": ""https://twitter.com/janedoe""
+            },
+            {
+              ""platform"": ""Instagram"",
+              ""url"": ""https://instagram.com/janedoe""
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+Ensure your JSON output adheres to these guidelines for correctness and completeness.",1150.4530069828033,0.58
+3,50,0.52,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}.
+
+Please ensure the following guidelines are met:
+
+1. Every JSON output must include an 'updatedAt' field with an ISO-8601 timestamp.
+2. Use 'page' as the top-level key unless another root key is explicitly provided.
+3. Include a 'layout' field at the page level with values 'vertical', 'horizontal', or 'grid'.
+4. Ensure all sections have a 'type' field drawn from the fixed vocabulary: 'header', 'text', 'image', 'productGrid', 'gallery', 'form', 'button', 'footer', or 'embed'.
+5. For forms, include 'method' and 'target' fields.
+6. All buttons must have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+7. Images must have 'src' and 'alt' attributes unless they are decorative.
+8. Prices should be numeric values without quotes.
+9. Internal links must start with '/'.
+10. Ensure that all URLs are secure (HTTPS).
+11. Specify 'columns' in 'productGrid' sections when applicable, based on the number of items. Use 'columns': 2 for 2-4 items, 'columns': 3 for 5-9 items, and adjust accordingly for more items.
+12. Use 'loading': 'lazy' for images to optimize loading times.
+13. Ensure that there is exactly one primary call-to-action per page.
+
+Example:
+
+Input: Design a landing page for a book with an overview section, testimonials from three readers, a 'Buy Now' button, and a section at the end for author biography and social media links.
+
+Output:
+```json
+{
+  ""page"": {
+    ""title"": ""Book Landing Page"",
+    ""layout"": ""vertical"",
+    ""updatedAt"": ""2024-01-01T12:00:00Z"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": {
+          ""title"": ""The Art of Stillness"",
+          ""subtitle"": ""Discover the Power of Stillness""
+        }
+      },
+      {
+        ""type"": ""text"",
+        ""content"": ""In 'The Art of Stillness', acclaimed author Jane Doe invites readers to slow down and embrace the present moment...""
+      },
+      {
+        ""type"": ""gallery"",
+        ""content"": [
+          {
+            ""name"": ""Emily R."",
+            ""quote"": ""This book changed my life. I finally learned how to quiet my mind and find joy in everyday moments.""
+          },
+          {
+            ""name"": ""Michael T."",
+            ""quote"": ""A beautifully written guide to mindfulness. The exercises are simple yet powerful.""
+          },
+          {
+            ""name"": ""Sofia L."",
+            ""quote"": ""Jane Doe's wisdom shines through every page. Highly recommended for anyone seeking peace.""
+          }
+        ]
+      },
+      {
+        ""type"": ""button"",
+        ""action"": ""navigate"",
+        ""text"": ""Buy Now"",
+        ""url"": ""https://bookstore.com/the-art-of-stillness""
+      },
+      {
+        ""type"": ""text"",
+        ""content"": {
+          ""name"": ""Jane Doe"",
+          ""bio"": ""Jane Doe is a bestselling author, meditation teacher, and speaker..."",
+          ""socialLinks"": [
+            {
+              ""platform"": ""Twitter"",
+              ""url"": ""https://twitter.com/janedoe""
+            },
+            {
+              ""platform"": ""Instagram"",
+              ""url"": ""https://instagram.com/janedoe""
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+Ensure your JSON output adheres to these guidelines for correctness and completeness.",1150.4530069828033,0.6
+4,50,0.5,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}.
+
+Please ensure the following guidelines are met:
+
+1. Every JSON output must include an 'updatedAt' field with an ISO-8601 timestamp.
+2. Use 'page' as the top-level key unless another root key is explicitly provided.
+3. Include a 'layout' field at the page level with values 'vertical', 'horizontal', or 'grid'.
+4. Ensure all sections have a 'type' field drawn from the fixed vocabulary: 'header', 'text', 'image', 'productGrid', 'gallery', 'form', 'button', 'footer', or 'embed'.
+5. For forms, include 'method' and 'target' fields.
+6. All buttons must have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+7. Images must have 'src' and 'alt' attributes unless they are decorative.
+8. Prices should be numeric values without quotes.
+9. Internal links must start with '/'.
+10. Ensure that all URLs are secure (HTTPS).
+11. Specify 'columns' in 'productGrid' sections when applicable, based on the number of items. Use 'columns': 2 for 2-4 items, 'columns': 3 for 5-9 items, and adjust accordingly for more items.
+12. Use 'loading': 'lazy' for images to optimize loading times.
+13. Ensure that there is exactly one primary call-to-action per page.
+14. Use appropriate section types for content, such as 'text' for textual content and 'gallery' for image collections.
+15. Ensure the section order mirrors the user's narrative order.
+
+Example:
+
+Input: Design a landing page for a book with an overview section, testimonials from three readers, a 'Buy Now' button, and a section at the end for author biography and social media links.
+
+Output:
+```json
+{
+  ""page"": {
+    ""title"": ""Book Landing Page"",
+    ""layout"": ""vertical"",
+    ""updatedAt"": ""2024-01-01T12:00:00Z"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": {
+          ""title"": ""The Art of Stillness"",
+          ""subtitle"": ""Discover the Power of Stillness""
+        }
+      },
+      {
+        ""type"": ""text"",
+        ""content"": ""In 'The Art of Stillness', acclaimed author Jane Doe invites readers to slow down and embrace the present moment...""
+      },
+      {
+        ""type"": ""gallery"",
+        ""content"": [
+          {
+            ""name"": ""Emily R."",
+            ""quote"": ""This book changed my life. I finally learned how to quiet my mind and find joy in everyday moments.""
+          },
+          {
+            ""name"": ""Michael T."",
+            ""quote"": ""A beautifully written guide to mindfulness. The exercises are simple yet powerful.""
+          },
+          {
+            ""name"": ""Sofia L."",
+            ""quote"": ""Jane Doe's wisdom shines through every page. Highly recommended for anyone seeking peace.""
+          }
+        ]
+      },
+      {
+        ""type"": ""button"",
+        ""action"": ""navigate"",
+        ""text"": ""Buy Now"",
+        ""url"": ""https://bookstore.com/the-art-of-stillness""
+      },
+      {
+        ""type"": ""text"",
+        ""content"": {
+          ""name"": ""Jane Doe"",
+          ""bio"": ""Jane Doe is a bestselling author, meditation teacher, and speaker..."",
+          ""socialLinks"": [
+            {
+              ""platform"": ""Twitter"",
+              ""url"": ""https://twitter.com/janedoe""
+            },
+            {
+              ""platform"": ""Instagram"",
+              ""url"": ""https://instagram.com/janedoe""
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+Ensure your JSON output adheres to these guidelines for correctness and completeness.",1150.4530069828033,0.6
+5,50,0.48,"You are an expert in JSON webpage creation. Your task is to generate a JSON structure for a webpage based on the following requirements: {input}.
+
+Please ensure the following guidelines are met:
+
+1. Every JSON output must include an 'updatedAt' field with an ISO-8601 timestamp.
+2. Use 'page' as the top-level key unless another root key is explicitly provided.
+3. Include a 'layout' field at the page level with values 'vertical', 'horizontal', or 'grid'.
+4. Ensure all sections have a 'type' field drawn from the fixed vocabulary: 'header', 'text', 'image', 'productGrid', 'gallery', 'form', 'button', 'footer', or 'embed'.
+5. For forms, include 'method' and 'target' fields.
+6. All buttons must have an 'action' key with values 'navigate', 'submitForm', or 'customEvent'.
+7. Images must have 'src' and 'alt' attributes unless they are decorative.
+8. Prices should be numeric values without quotes.
+9. Internal links must start with '/'.
+10. Ensure that all URLs are secure (HTTPS).
+11. Specify 'columns' in 'productGrid' sections when applicable, based on the number of items. Use 'columns': 2 for 2-4 items, 'columns': 3 for 5-9 items, and adjust accordingly for more items.
+12. Use 'loading': 'lazy' for images to optimize loading times.
+13. Ensure that there is exactly one primary call-to-action per page.
+14. Use appropriate section types for content, such as 'text' for textual content and 'gallery' for image collections.
+15. Ensure the section order mirrors the user's narrative order.
+
+Example:
+
+Input: Design a landing page for a book with an overview section, testimonials from three readers, a 'Buy Now' button, and a section at the end for author biography and social media links.
+
+Output:
+```json
+{
+  ""page"": {
+    ""title"": ""Book Landing Page"",
+    ""layout"": ""vertical"",
+    ""updatedAt"": ""2024-01-01T12:00:00Z"",
+    ""sections"": [
+      {
+        ""type"": ""header"",
+        ""content"": {
+          ""title"": ""The Art of Stillness"",
+          ""subtitle"": ""Discover the Power of Stillness""
+        }
+      },
+      {
+        ""type"": ""text"",
+        ""content"": ""In 'The Art of Stillness', acclaimed author Jane Doe invites readers to slow down and embrace the present moment...""
+      },
+      {
+        ""type"": ""gallery"",
+        ""content"": [
+          {
+            ""name"": ""Emily R."",
+            ""quote"": ""This book changed my life. I finally learned how to quiet my mind and find joy in everyday moments.""
+          },
+          {
+            ""name"": ""Michael T."",
+            ""quote"": ""A beautifully written guide to mindfulness. The exercises are simple yet powerful.""
+          },
+          {
+            ""name"": ""Sofia L."",
+            ""quote"": ""Jane Doe's wisdom shines through every page. Highly recommended for anyone seeking peace.""
+          }
+        ]
+      },
+      {
+        ""type"": ""button"",
+        ""action"": ""navigate"",
+        ""text"": ""Buy Now"",
+        ""url"": ""https://bookstore.com/the-art-of-stillness""
+      },
+      {
+        ""type"": ""text"",
+        ""content"": {
+          ""name"": ""Jane Doe"",
+          ""bio"": ""Jane Doe is a bestselling author, meditation teacher, and speaker..."",
+          ""socialLinks"": [
+            {
+              ""platform"": ""Twitter"",
+              ""url"": ""https://twitter.com/janedoe""
+            },
+            {
+              ""platform"": ""Instagram"",
+              ""url"": ""https://instagram.com/janedoe""
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+Ensure your JSON output adheres to these guidelines for correctness and completeness.",1150.4530069828033,
