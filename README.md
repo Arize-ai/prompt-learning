@@ -70,11 +70,27 @@ Initial prompts violate all the rules, creating clear failure cases for optimiza
 
 ### Table 1: Prompt Learning Performance
 
-| Ruleset Size | Test Accuracy - Unoptimized Prompt | Test Accuracy - 1 loop Optimization| Test Accuracy - 5 loops Optimization | Latency |
-|--------------|----------------|---------------|---------------|---------------|
-| 10 | 0% | 84% | 100% | 1084.12s |
-| 50 | 0% | 66% | 82% | 1150.45s |
-| 100 | 0% | 42% | 67% | 1294.27s |
+| **Ruleset Size** | **Num Loops** | **Feedback Type**      | **Baseline Accuracy** | **Baseline Accuracy with Ruleset** | **Test Accuracy** | **Latency**
+| ---------------- | ------------- | ---------------------- | --------------------- | ---------------------------------- | ----------------- | ------------ |
+| 10               | 1             | Explanation            | 0%                    | 40.40%                             | 71%               | 
+| 10               | 1             | Rule                   | 0%                    | 40.40%                             | 15.10%            |
+| **10**           | **1**         | **Explanation + Rule** | **0%**                | **40.40%**                         | **84%**           |
+| 10               | 5             | Explanation            | 0%                    | 40.40%                             | 100%              |
+| 10               | 5             | Rule                   | 0%                    | 40.40%                             | 0%                |
+| **10**           | **5**         | **Explanation + Rule** | **0%**                | **40.40%**                         | **100%**          | **1084.12s** |
+| 50               | 1             | Explanation            | 0%                    | 14.70%                             | 64%               |
+| 50               | 1             | Rule                   | 0%                    | 14.70%                             | 0%                |
+| **50**           | **1**         | **Explanation + Rule** | **0%**                | **14.70%**                         | **66%**           |
+| 50               | 5             | Explanation            | 0%                    | 14.70%                             | 69%               |
+| 50               | 5             | Rule                   | 0%                    | 14.70%                             | 0%                |
+| **50**           | **5**         | **Explanation + Rule** | **0%**                | **14.70%**                         | **82%**           | **1150.45s** |
+| 100              | 1             | Explanation            | 0%                    | 5.80%                              | 0%                |
+| 100              | 1             | Rule                   | 0%                    | 5.80%                              | 0%                |
+| **100**          | **1**         | **Explanation + Rule** | **0%**                | **5.80%**                          | **0%**            |
+| 100              | 5             | Explanation            | 0%                    | 5.80%                              | 38%               |
+| 100              | 5             | Rule                   | 0%                    | 5.80%                              | 0%                |
+| **100**          | **5**         | **Explanation + Rule** | **0%**                | **5.80%**                          | **67%**           | **1294.27s** |
+
 
 This is over a dataset of 100 webpage JSON queries. Accuracy is measured by number of query outputs (using the system prompt) following the entire ruleset. 
 
@@ -84,6 +100,8 @@ This is over a dataset of 100 webpage JSON queries. Accuracy is measured by numb
 2. **Strong results with 5 loops**: In just 5 loops, we see strong results in prompt learning
 3. **Dramatic Improvement**: Prompt learning drastically outperforms un-optimized cases (near-zero baseline accuracy)
 4. **Cost Efficiency**: Low latency overall. Big ruleset size increases do not have big impacts on latency.
+5. **Evals work best in combination** Explanation is clearly the most effective eval feedback on its own. But you can see that when using both explanation and rule evals, the test accuracy jumps up significantly. This shows that having good evals that you can trust, despite them being weak individually, can work well when they are provided to the optimizer LLM together. 
+
 
 ## Repository Structure
 
