@@ -66,11 +66,11 @@ We chose a JSON generation problem where models had to generate JSON for a webpa
 
 ### Table 1: Prompt Learning Performance
 
-| Ruleset Size | Test Accuracy - Unoptimized Prompt | Test Accuracy - 1 loop Optimization| Test Accuracy - 5 loops Optimization |
+| Ruleset Size | Test Accuracy - Unoptimized Prompt | Test Accuracy - 1 loop Optimization| Test Accuracy - 5 loops Optimization | Latency |
 |--------------|----------------|---------------|---------------|
-| 10 | 0% | 84% | 100% |
-| 50 | 0% | 66% | 82% |
-| 100 | 0% | 42% | 67% |
+| 10 | 0% | 84% | 100% | 1084.12s |
+| 50 | 0% | 66% | 82% | 1150.45s |
+| 100 | 0% | 42% | 67% | 1294.27s |
 
 This is over a dataset of 100 webpage JSON queries. Accuracy is measured by number of query outputs (using the system prompt) following the entire ruleset. 
 
@@ -79,7 +79,7 @@ This is over a dataset of 100 webpage JSON queries. Accuracy is measured by numb
 1. **Single Loop Optimization**: Strong improvements in accuracy in just one loop of prompt optimization
 2. **Strong results with 5 loops**: In just 5 loops, we see strong results in prompt learning
 3. **Dramatic Improvement**: Prompt learning drastically outperforms un-optimized cases (near-zero baseline accuracy)
-4. **Cost Efficiency**: Low latency overall
+4. **Cost Efficiency**: Low latency overall. Big ruleset size increases do not have big impacts on latency.
 
 ## Repository Structure
 
