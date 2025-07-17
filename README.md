@@ -67,7 +67,7 @@ We chose a JSON generation problem where models had to generate JSON for a webpa
 ### Table 1: Prompt Learning Performance
 
 | Ruleset Size | Test Accuracy - Unoptimized Prompt | Test Accuracy - 1 loop Optimization| Test Accuracy - 5 loops Optimization | Latency |
-|--------------|----------------|---------------|---------------|
+|--------------|----------------|---------------|---------------|---------------|
 | 10 | 0% | 84% | 100% | 1084.12s |
 | 50 | 0% | 66% | 82% | 1150.45s |
 | 100 | 0% | 42% | 67% | 1294.27s |
