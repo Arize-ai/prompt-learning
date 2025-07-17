@@ -161,45 +161,6 @@ python prompt_learning_run.py
 # Edit RUN_MULTI_RULE_EXPERIMENTS = True in prompt_learning_run.py
 ```
 
-## Key Innovations
-
-### 1. English Error Terms
-- Natural language feedback instead of numerical scores
-- Direct integration of explanations into prompt optimization
-- Solves problems unsolvable by pure prompt optimization
-
-### 2. Online Prompt Management
-- Continuous improvement system
-- Human control of prompt change acceptance
-- Built-in instruction lifecycle management
-
-### 3. Single-Example Learning
-- Powerful changes using individual examples
-- Information-rich feedback from explanations
-- Leverages existing eval traces or human annotations
-
-### 4. Instruction Management
-- Handles competing instructions
-- Supports instruction expiration
-- Enables human review gates
-- Deduplication and versioning
-
-## Comparison with Other Approaches
-
-### vs. PromptAgent (ICLR '24)
-
-| Dimension | PromptAgent | Prompt Learning (PL) |
-|-----------|-------------|---------------------|
-| **Objective** | Find single "expert-level" prompt maximizing numeric task score | Continuously maintain production prompt for self-healing |
-| **Optimizer** | MCTS over prompt edits; each node = prompt, each edge = edit | Meta-prompt controller reading English critique |
-| **Update Granularity** | Edits entire task prompt; final prompt frozen | Edits only Instruction section in fenced region |
-| **Use of Critiques** | Generates constructive error feedback but text not kept in final prompt | Primary signal; English critique feeds meta-prompt |
-| **Conflict Management** | None once search ends; manual pruning required | Built-in: deduplication, versioning, expiration |
-| **Online vs. Offline** | Offline: heavy search then deployment | Online: one extra LLM call per failure |
-| **Data Requirement** | Moderate-sized scored dev set | Works with single examples |
-| **Compute Cost** | Front-loaded (search); negligible at inference | Minimal upfront, <1 extra call per optimization |
-| **Interpretability** | Final prompt readable, reasoning hidden in search logs | Full audit trail: every instruction edit in plain English |
-
 ## Contributing
 
 You can contribute to the optimizer sdk itself within the optimizer_sdk notebook. You can also add notebooks, datasets, or other additional material. 
