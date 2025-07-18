@@ -2,7 +2,7 @@ arize-phoenix-evals
 arize-phoenix-client
 tiktoken
 openai
-arize-toolkit==1.0.5
+arize-toolkit==1.0.6
 pandas
 scikit-learn
 nest-asyncio

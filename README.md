@@ -108,6 +108,11 @@ BIG-Bench Hard (BBH) is a diverse evaluation suite for language models. Here is 
 
 | Task | Final GT | Init GT | GT Δ | Final LLM | Init LLM | LLM Δ | Type |
 |------|----------|---------|------|-----------|----------|-------|------|
+| boolean_expressions | 0.920 |   0.960  |   0.660   |  0.680  |    0.040  | 0.020  |  boolean |
+| web_of_lies     |     0.540  |  0.640   |  0.200  |   0.640   |   0.100  | 0.440  |  general |
+| word_sorting     |    0.840  |  0.880  |   0.760  |   0.780  |    0.040 |  0.020  |  sorting |
+| sports_understanding | 0.860  |  0.960  |   0.900   |  0.960  |    0.100  | 0.060  |  general |
+| object_counting   |   0.820  |  0.720   |  0.920   |  0.980     | -0.100 | 0.060 |   counting|
 | disambiguation_qa | 0.580 | 0.740 | -0.160 | 0.800 | 0.640 | 0.160 | general |
 | geometric_shapes | 0.560 | 0.500 | 0.060 | 0.560 | 0.560 | 0.000 | general |
 | hyperbaton | 0.980 | 0.900 | 0.080 | 0.720 | 0.560 | 0.160 | general |
@@ -120,7 +125,7 @@ BIG-Bench Hard (BBH) is a diverse evaluation suite for language models. Here is 
 | temporal_sequences | 1.000 | 0.980 | 0.020 | 0.940 | 0.940 | 0.000 | general |
 | tracking_shuffled_objects_five_objects | 0.340 | 0.360 | -0.020 | 0.520 | 0.540 | -0.020 | general |
 | tracking_shuffled_objects_seven_objects | 0.360 | 0.320 | 0.040 | 0.240 | 0.520 | -0.280 | general |
-| **AVERAGE / Δ SUM** | **0.693** | **0.610** | **1.000** | **0.663** | **0.598** | **0.780** | |
+| **AVERAGE / Δ SUM** | **0.693** | **0.610** | **1.000** | **0.663** | **0.598** | **0.780** | general |
 
 
 ## Repository Structure
@@ -133,7 +138,18 @@ prompt-learning/
 │   ├── tiktoken_splitter.py   # Token counting utilities
 │   ├── constants.py           # Configuration constants
 │   └── utils.py              # Utility functions
-├── prompts/               # Prompt templates for different rule counts
+├── big_bench_hard/
+│   ├── evaluator_prompts/         # Evaluator prompt templates for BBH tasks
+│   │   ├── evaluator-bool.txt
+│   │   ├── evaluator-lies.txt
+│   │   ├── evaluator-object.txt
+│   │   ├── evaluator-sports.txt
+│   │   └── evaluator-wordsort.txt
+│   └── run_files/                # Scripts and experiment runners for BBH
+│       ├── pl_multidataset.py
+│       ├── run_bbh_experiments.py
+│       └── ...
+├── prompts/                      # Prompt templates for main (non-BBH) experiments
 │   ├── evaluator-prompt-10.txt
 │   ├── evaluator-prompt-50.txt
 │   ├── evaluator-prompt-100.txt

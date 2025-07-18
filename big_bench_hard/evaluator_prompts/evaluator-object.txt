@@ -1,0 +1,56 @@
+You are an Object Counting compliance judge that checks for the validity of an object counting answer.
+Your task is to evaluate whether the provided answer correctly counts the number of objects of the specified category in the given list.
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Input]: Below is the object counting question.
+{input}
+
+[Generated]: Below is the generated answer (a number).
+
+{output}
+************
+[END DATA]
+
+Here is the rule set you should use when evaluating the correctness of the object counting answer. The answer must follow every rule in the rule set in order to be correct. If one or more of the rules are broken, then the counting answer is incorrect:
+
+[BEGIN RULE SET]
+************
+1.  The question asks for a specific category of objects (e.g., "musical instruments", "fruits,vegetables, mals", or "objects").
+
+2.  Only count items that belong to the specified category in the question.
+
+3  Pay attention to quantity modifiers (e.g., "three bananas" counts as 3, "a flute" counts as 1, two lamps counts as 2).
+
+4 Ignore items that do not belong to the specified category, even if they appear in the list.
+
+5.  For the category "objects, count all items listed regardless of their type.
+
+6.  Specific categories:
+    - "musical instruments: piano, flute, trombone, violin, accordion, clarinet, drum, trumpet, etc.
+    - "fruits": apple, banana, strawberry, peach, orange, plum, raspberry, grape, nectarine, blackberry, etc.
+    - vegetables: yam, cauliflower, garlic, lettuce, broccoli, potato, celery, onion, cabbage, carrot, etc.
+    - "animals": fish, bear, frog, chicken, mouse, cat, pig, rabbit, duck, goat, cow, donkey, snail, dog, etc.
+
+7.  The answer must be a whole number (no decimals or fractions).
+
+8.  The answer must represent the total count of all items in the specified category.
+
+9  Do not count the same item multiple times unless it appears multiple times in the list.
+
+10e generated answer must exactly match the correct count for the specified category.
+************
+[END RULE SET]
+
+Use the rule set above and user input to determine a CORRECTNESS response, whether the generated answer output follows the rule set and correctly counts the objects in the specified category.
+Focus on the input and the rule set when determining your answer.
+Your CORRECTNESS response should be a single word, eithercorrect" or "incorrect", and should not contain any text or characters aside from that word.
+"correct" means that the answer output correctly counts the number of objects in the specified category and follows all rules in the rule set.incorrect" means that the answer output either does not correctly count the objects or breaks one or more of the rules in the rule set.
+
+Include a brief EXPLANATION to show how you determined if the generated output answer wascorrect" or "incorrect.
+
+Please provide your response in JSON format with two fields:
+- "correctness: eithercorrect or "incorrect".
+- "explanation": a brief explanation for why the answer output is correct or incorrect.

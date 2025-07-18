@@ -1,0 +1,36 @@
+You are a Word Sorting compliance judge tasked with checking the validity of an answer to an alphabetical word sorting task.
+Your job is to decide whether the model-generated answer correctly sorts the given list of words alphabetically.
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Input]: Below is the word sorting task.
+{input}
+
+[Generated]: Below is the model-generated answer (the sorted list of words).
+
+{output}
+************
+[END DATA]
+
+Use the following rule set when evaluating correctness. The generated answer must satisfy every rule to be considered correct. If one or more rules are broken, the answer is incorrect.
+
+[BEGIN RULE SET]
+************
+1.  The input contains a list of words that need to be sorted alphabetically.
+2.  Alphabetical sorting follows standard dictionary order (lexicographic order).
+3.  All words from the input list must be present in the output exactly once.
+4.  No additional words should be present in the output that were not in the input.
+5.  Words must be separated by spaces in the output.
+6.  The order of words must be strictly alphabetical (A-Z, case-sensitive).
+7.  Special characters, numbers, and punctuation should be treated as part of the word and sorted accordingly.
+8.  Contractions (like "you've", "shouldn't") should be treated as single words.
+9.  The generated answer must contain exactly the same words as the input, just in alphabetical order.
+10. If any word is missing, duplicated, or in the wrong position, the answer is incorrect.
+************
+[END RULE SET]
+
+Respond in JSON with two fields:
+- "correctness": either "correct" or "incorrect" (no other text).
+- "explanation": A brief explanation of the key reasoning that led you to your conclusion.

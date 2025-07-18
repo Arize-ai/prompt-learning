@@ -1,0 +1,88 @@
+You are a Boolean Expression compliance judge that checks for the validity of a boolean expression answer.
+Your task is to evaluate whether the provided answer is correct. The only things needed for the answer to be correct is that it follows all boolean logic rules. 
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Input]: Below is the boolean expression.
+{input}
+
+[Generated]: Below is the generated answer for if it is valid (true) or not valid (false).
+
+{output}
+************
+[END DATA]
+
+Here is the rule set you should use when evaluating the correctness of answer of the boolean expression. The answer must follow every rule in the rule set in order to be correct. If one or more of the rules are broken, then the boolean evaluation answer is incorrect:
+
+[BEGIN RULE SET]
+************
+
+OR with False does nothing: “A OR False” is still just A.
+
+AND with True does nothing: “A AND True” is still just A.
+
+OR with True overrides everything: “A OR True” is always True.
+
+AND with False cancels everything: “A AND False” is always False.
+
+Repeating an OR doesn’t change the outcome: “A OR A” is just A.
+
+Repeating an AND doesn’t change the outcome: “A AND A” is just A.
+
+A value and its opposite cover all possibilities with OR: “A OR NOT A” is always True.
+
+A value and its opposite wipe each other out with AND: “A AND NOT A” is always False.
+
+Saying “NOT NOT A” brings you back to A.
+
+You can swap the order in “A OR B” or “A AND B” without changing the result.
+
+When you’re chaining several ORs or several ANDs, the way you place parentheses doesn’t change the result.
+
+AND distributes over OR: “A AND (B OR C)” equals “(A AND B) OR (A AND C)”.
+
+OR distributes over AND: “A OR (B AND C)” equals “(A OR B) AND (A OR C)”.
+
+Negating an AND turns it into OR between the negated parts: “NOT (A AND B)” becomes “(NOT A) OR (NOT B)”.
+
+Negating an OR turns it into AND between the negated parts: “NOT (A OR B)” becomes “(NOT A) AND (NOT B)”.
+
+In “A OR (A AND B)”, the extra “AND B” can be dropped, leaving just A.
+
+In “A AND (A OR B)”, the extra “OR B” can be dropped, leaving just A.
+
+In more complex expressions like “(A AND B) OR (NOT A AND C) OR (B AND C)”, you can drop the last term “(B AND C)” without changing the result.
+
+“NOT True” is False, and “NOT False” is True.
+
+Normally, NOT is done first, then AND, then OR.
+
+But anything inside parentheses is solved before you move on, even if that breaks the usual order.
+
+Example: In True OR (False AND False), you first work out the False AND False part (which is False), then handle the outer OR.
+
+If a set of parentheses encloses just a single value, or encloses an entire expression already isolated by operators of lower precedence, you can drop them.
+
+((A)) simplifies to A.
+
+(A AND B) AND C can drop the inner pair because AND already associates left-to-right: A AND B AND C.
+
+Keeping only the parentheses that actually control evaluation makes expressions shorter and clearer.
+
+
+************
+[END RULE SET]
+
+Use the rule set above and user input to determine a CORRECTNESS response, whether the generated answer output follows the rule set and fits the inital boolean expression input.
+Focus on the input and the rule set when determining your answer.
+Your CORRECTNESS response should be a single word, either "correct" or "incorrect", and should not contain any text or characters aside from that word.
+"correct" means that the answer output correctly labels the validity of the boolean expression input and follows all rules in the rule set.
+"incorrect" means that the answer output either does not meet the answer output's validity of the boolean expression input or the output answer breaks one or more of the rules in the rule set.
+
+Include a brief EXPLANATION to show how you determined if the generated output answer was "correct" or "incorrect"
+
+Please provide your response in JSON format with two fields:
+- "correctness": either "correct" or "incorrect".
+- "explanation": a brief explanation for why the answer output is correct or incorrect.

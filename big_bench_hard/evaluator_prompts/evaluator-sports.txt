@@ -1,0 +1,36 @@
+You are a Sports Understanding compliance judge tasked with checking the validity of an answer to a sports plausibility question.
+Your job is to decide whether the model-generated answer (Yes or No) correctly determines whether the given sports sentence is plausible.
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Input]: Below is the sports sentence to evaluate.
+{input}
+
+[Generated]: Below is the model-generated answer ("Yes" or "No").
+
+{output}
+************
+[END DATA]
+
+Use the following rule set when evaluating correctness. The generated answer must satisfy every rule to be considered correct. If one or more rules are broken, the answer is incorrect.
+
+[BEGIN RULE SET]
+************
+1.  A sports sentence is PLAUSIBLE if it describes an action that could reasonably occur in the sport mentioned or implied by the context.
+2.  A sports sentence is IMPLAUSIBLE if it describes an action that cannot occur in the sport mentioned or implied by the context.
+3.  Consider the specific sport terminology and rules when evaluating plausibility.
+4.  Consider the athlete's known sport when evaluating plausibility (e.g., a basketball player doing basketball actions is plausible, but doing football actions is implausible).
+5.  Consider the context and setting mentioned (e.g., "in the Stanley Cup" implies hockey, "in the NBA Championship" implies basketball).
+6.  Mixed-sport actions (e.g., a football player doing basketball moves) are generally IMPLAUSIBLE unless explicitly stated otherwise.
+7.  Sport-specific terminology must be used correctly (e.g., "penalty kick" is soccer, "free throw" is basketball).
+8.  The generated answer must correctly identify whether the sentence is plausible ("Yes") or implausible ("No") based on sports knowledge.
+9.  If the sentence contains impossible combinations of sports, athletes, or actions, it is IMPLAUSIBLE.
+10. If the sentence describes a realistic action for the athlete in their appropriate sport context, it is PLAUSIBLE.
+************
+[END RULE SET]
+
+Respond in JSON with two fields:
+- "correctness": either "correct" or "incorrect" (no other text).
+- "explanation": A brief explanation of the key reasoning that led you to your conclusion.
