@@ -102,6 +102,26 @@ This is over a dataset of 100 webpage JSON queries. Accuracy is measured by numb
 4. **Cost Efficiency**: Low latency overall. Big ruleset size increases do not have big impacts on latency.
 5. **Evals Thrive in Combination**
 
+### Table 2: BIG-Bench Hard 
+
+BIG-Bench Hard (BBH) is a diverse evaluation suite for language models. Here is how prompt learning performed.
+
+| Task | Final GT | Init GT | GT Δ | Final LLM | Init LLM | LLM Δ | Type |
+|------|----------|---------|------|-----------|----------|-------|------|
+| disambiguation_qa | 0.580 | 0.740 | -0.160 | 0.800 | 0.640 | 0.160 | general |
+| geometric_shapes | 0.560 | 0.500 | 0.060 | 0.560 | 0.560 | 0.000 | general |
+| hyperbaton | 0.980 | 0.900 | 0.080 | 0.720 | 0.560 | 0.160 | general |
+| logical_deduction_seven_objects | 0.760 | 0.780 | -0.020 | 0.880 | 0.920 | -0.040 | general |
+| logical_deduction_three_objects | 0.960 | 0.960 | 0.000 | 1.000 | 1.000 | 0.000 | general |
+| penguins_in_a_table | 0.700 | 0.700 | 0.000 | 0.000 | 0.820 | -0.820 | general |
+| reasoning_about_colored_objects | 0.780 | 0.000 | 0.780 | 0.820 | 0.000 | 0.820 | general |
+| salient_translation_error_detection | 0.760 | 0.660 | 0.100 | 0.660 | 0.680 | -0.020 | general |
+| snarks | 0.540 | 0.420 | 0.120 | 0.820 | 0.000 | 0.820 | general |
+| temporal_sequences | 1.000 | 0.980 | 0.020 | 0.940 | 0.940 | 0.000 | general |
+| tracking_shuffled_objects_five_objects | 0.340 | 0.360 | -0.020 | 0.520 | 0.540 | -0.020 | general |
+| tracking_shuffled_objects_seven_objects | 0.360 | 0.320 | 0.040 | 0.240 | 0.520 | -0.280 | general |
+| **AVERAGE / Δ SUM** | **0.693** | **0.610** | **1.000** | **0.663** | **0.598** | **0.780** | |
+
 
 ## Repository Structure
 
