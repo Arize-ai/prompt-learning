@@ -100,7 +100,7 @@ This is over a dataset of 100 webpage JSON queries. Accuracy is measured by numb
 2. **Strong results with 5 loops**: In just 5 loops, we see strong results in prompt learning
 3. **Dramatic Improvement**: Prompt learning drastically outperforms un-optimized cases (near-zero baseline accuracy)
 4. **Cost Efficiency**: Low latency overall. Big ruleset size increases do not have big impacts on latency.
-5. **Evals work best in combination** Explanation is clearly the most effective eval feedback on its own. But you can see that when using both explanation and rule evals, the test accuracy jumps up significantly. This shows that having good evals that you can trust, despite them being weak individually, can work well when they are provided to the optimizer LLM together. 
+5. **Evals Thrive in Combination**
 
 
 ## Repository Structure
