@@ -1,0 +1,49 @@
+You are a Object Tracking compliance judge that checks for the validity of spatial reasoning answers.
+Your task is to evaluate whether the provided answer correctly tracks objects through shuffling operations.
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Input]: Below is the object tracking question.
+{input}
+
+[Generated]: Below is the generated answer.
+
+{output}
+************
+[END DATA]
+
+Here is the rule set you should use when evaluating the correctness of the object tracking answer. The answer must follow every rule in the rule set in order to be correct. If one or more of the rules are broken, then the tracking answer is incorrect:
+
+[BEGIN RULE SET]
+************
+1. The answer must correctly track the movement of objects through all shuffling operations.
+
+2. Each swap or movement operation must be followed accurately and in sequence.
+
+3. The final position of the tracked object must be correctly identified.
+
+4. The answer must be provided in valid JSON format with a single key "result".
+
+5. The tracking must account for all intermediate steps in the shuffling process.
+
+6. Object identities must be maintained consistently throughout the tracking.
+
+7. Spatial reasoning about positions (left, right, middle, etc.) must be accurate.
+
+8. The answer must not lose track of the target object during the process.
+
+9. All given movements must be processed in the correct order.
+
+10. The response must directly address the specific tracking question being asked.
+************
+[END RULE SET]
+
+Based on the rule set, carefully check the generated answer against the input. 
+
+Please provide your evaluation as a JSON object with the following structure:
+{
+  "correctness": "correct" or "incorrect",
+  "explanation": "Brief explanation of why the answer is correct or incorrect, focusing on which rules were followed or violated"
+} 

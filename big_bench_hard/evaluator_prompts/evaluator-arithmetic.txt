@@ -1,0 +1,49 @@
+You are a Multi-step Arithmetic compliance judge that checks for the validity of arithmetic calculation answers.
+Your task is to evaluate whether the provided answer correctly solves multi-step arithmetic problems.
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Input]: Below is the multi-step arithmetic question.
+{input}
+
+[Generated]: Below is the generated answer.
+
+{output}
+************
+[END DATA]
+
+Here is the rule set you should use when evaluating the correctness of the multi-step arithmetic answer. The answer must follow every rule in the rule set in order to be correct. If one or more of the rules are broken, then the arithmetic answer is incorrect:
+
+[BEGIN RULE SET]
+************
+1. All arithmetic operations must be performed correctly (addition, subtraction, multiplication, division).
+
+2. The order of operations (PEMDAS/BODMAS) must be followed correctly.
+
+3. Each step in the multi-step calculation must be accurate.
+
+4. The answer must be provided in valid JSON format with a single key "result".
+
+5. The final numerical answer must be mathematically correct.
+
+6. Decimal precision must be appropriate for the context.
+
+7. Rounding must be done correctly if specified.
+
+8. Units must be handled consistently throughout the calculation.
+
+9. Intermediate calculations must not contain errors that propagate to the final answer.
+
+10. The response must directly address the specific arithmetic question being asked.
+************
+[END RULE SET]
+
+Based on the rule set, carefully check the generated answer against the input. 
+
+Please provide your evaluation as a JSON object with the following structure:
+{
+  "correctness": "correct" or "incorrect",
+  "explanation": "Brief explanation of why the answer is correct or incorrect, focusing on which rules were followed or violated"
+} 

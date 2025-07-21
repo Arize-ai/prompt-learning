@@ -898,6 +898,25 @@ bool_prompt = "You are an expert in solving boolean expressions. Return your ans
 word_sorting_prompt = "You are an expert in sorting words alphabetically. Return your answer **in JSON** with a single key `result` whose value is the alphabetically sorted list of words separated by spaces. This is your task: {input}"
 sports_prompt = "You are an expert in understanding sports. Return your answer **in JSON** with a single key `result` whose value is either \"Yes\" or \"No\". This is your task: {input}"
 object_prompt = "You are an expert in counting objects. Return your answer **in JSON** with a single key `result` whose value is the number of objects in the input. This is your task: {input}"
+# Comprehensive prompts for all BigBench Hard tasks
+causal_prompt = "You are an expert in causal reasoning. Analyze the given scenario and determine the causal relationship. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+date_prompt = "You are an expert in date understanding and temporal reasoning. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+disambiguation_prompt = "You are an expert in disambiguation and question answering. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+dyck_prompt = "You are an expert in formal language theory and parsing Dyck languages. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+fallacies_prompt = "You are an expert in identifying formal fallacies in logical arguments. Return your answer **in JSON** with a single key `result` whose value is either \"valid\" or \"invalid\". This is your task: {input}"
+geometric_prompt = "You are an expert in geometric reasoning and shape analysis. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+hyperbaton_prompt = "You are an expert in syntax and understanding hyperbaton (word order variations). Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+logical_deduction_prompt = "You are an expert in logical deduction and reasoning. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+movie_prompt = "You are an expert in movie recommendations and entertainment preferences. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+arithmetic_prompt = "You are an expert in multi-step arithmetic calculations. Return your answer **in JSON** with a single key `result` whose value is the final numerical answer. This is your task: {input}"
+navigate_prompt = "You are an expert in navigation and spatial reasoning. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+penguins_prompt = "You are an expert in table reasoning and data analysis. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+colored_objects_prompt = "You are an expert in reasoning about colored objects and their properties. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+ruin_names_prompt = "You are an expert in name corruption and string manipulation. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+translation_prompt = "You are an expert in detecting translation errors. Return your answer **in JSON** with a single key `result` whose value is either \"Yes\" or \"No\". This is your task: {input}"
+snarks_prompt = "You are an expert in solving logical puzzles and snarks. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+temporal_prompt = "You are an expert in temporal sequence reasoning and time-based logic. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
+tracking_prompt = "You are an expert in tracking shuffled objects and spatial reasoning. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 
 # Main execution code - uncomment to run experiments with CSV data
 # Note: This code assumes you have the original CSV files. 
@@ -1067,6 +1086,29 @@ def run_bbh_experiments():
         "word_sorting": ("evaluator-wordsort", word_sorting_prompt, "sorting"),
         "sports_understanding": ("evaluator-sports", sports_prompt, "general"),
         "object_counting": ("evaluator-object", object_prompt, "counting"),
+        # All 27 BigBench Hard tasks
+        "causal_judgement": ("evaluator-causal", causal_prompt, "general"),
+        "date_understanding": ("evaluator-date", date_prompt, "general"),
+        "disambiguation_qa": ("evaluator-disambiguation", disambiguation_prompt, "general"),
+        #"dyck_languages": ("evaluator-dyck", dyck_prompt, "general"),
+        "formal_fallacies": ("evaluator-fallacies", fallacies_prompt, "general"),
+        "geometric_shapes": ("evaluator-geometric", geometric_prompt, "general"),
+        "hyperbaton": ("evaluator-hyperbaton", hyperbaton_prompt, "general"),
+        "logical_deduction_five_objects": ("evaluator-logical", logical_deduction_prompt, "general"),
+        "logical_deduction_seven_objects": ("evaluator-logical", logical_deduction_prompt, "general"),
+        "logical_deduction_three_objects": ("evaluator-logical", logical_deduction_prompt, "general"),
+        #"movie_recommendation": ("evaluator-movie", movie_prompt, "general"),
+        "multistep_arithmetic_two": ("evaluator-arithmetic", arithmetic_prompt, "counting"),
+        #"navigate": ("evaluator-navigate", navigate_prompt, "general"),
+        "penguins_in_a_table": ("evaluator-penguins", penguins_prompt, "general"),
+        "reasoning_about_colored_objects": ("evaluator-colored", colored_objects_prompt, "general"),
+        #"ruin_names": ("evaluator-ruin", ruin_names_prompt, "general"),
+        "salient_translation_error_detection": ("evaluator-translation", translation_prompt, "general"),
+        "snarks": ("evaluator-snarks", snarks_prompt, "general"),
+        "temporal_sequences": ("evaluator-temporal", temporal_prompt, "general"),
+        "tracking_shuffled_objects_five_objects": ("evaluator-tracking", tracking_prompt, "general"),
+        "tracking_shuffled_objects_seven_objects": ("evaluator-tracking", tracking_prompt, "general"),
+        "tracking_shuffled_objects_three_objects": ("evaluator-tracking", tracking_prompt, "general"),
     }
     
     results_df = pd.DataFrame(columns=["initial metric", "train", "test", "prompt", "file", "raw"])

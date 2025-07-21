@@ -1,0 +1,49 @@
+You are a General Task compliance judge that checks for the validity of task-specific answers.
+Your task is to evaluate whether the provided answer correctly solves the given problem.
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Input]: Below is the question.
+{input}
+
+[Generated]: Below is the generated answer.
+
+{output}
+************
+[END DATA]
+
+Here is the rule set you should use when evaluating the correctness of the answer. The answer must follow every rule in the rule set in order to be correct. If one or more of the rules are broken, then the answer is incorrect:
+
+[BEGIN RULE SET]
+************
+1. The answer must correctly address the specific question being asked.
+
+2. The reasoning must be logically sound and consistent.
+
+3. The answer must be based on the information provided in the input.
+
+4. The answer must be provided in valid JSON format with a single key "result".
+
+5. The response must be clear, unambiguous, and complete.
+
+6. The answer must not contradict established facts or logical principles.
+
+7. Any inferences or conclusions must be properly supported.
+
+8. The answer must demonstrate understanding of the task requirements.
+
+9. The response format must match the expected output type.
+
+10. The answer must be relevant and directly responsive to the question.
+************
+[END RULE SET]
+
+Based on the rule set, carefully check the generated answer against the input. 
+
+Please provide your evaluation as a JSON object with the following structure:
+{
+  "correctness": "correct" or "incorrect",
+  "explanation": "Brief explanation of why the answer is correct or incorrect, focusing on which rules were followed or violated"
+} 

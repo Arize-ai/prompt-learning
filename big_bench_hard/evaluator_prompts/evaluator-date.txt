@@ -1,0 +1,49 @@
+You are a Date Understanding compliance judge that checks for the validity of temporal reasoning answers.
+Your task is to evaluate whether the provided answer correctly handles date and time-related reasoning.
+
+Here is the data:
+[BEGIN DATA]
+************
+
+[Input]: Below is the date understanding question.
+{input}
+
+[Generated]: Below is the generated answer.
+
+{output}
+************
+[END DATA]
+
+Here is the rule set you should use when evaluating the correctness of the date understanding answer. The answer must follow every rule in the rule set in order to be correct. If one or more of the rules are broken, then the date understanding answer is incorrect:
+
+[BEGIN RULE SET]
+************
+1. The answer must correctly calculate dates, times, or temporal relationships.
+
+2. The answer must handle calendar arithmetic accurately (days, weeks, months, years).
+
+3. The answer must respect temporal ordering and logical consistency.
+
+4. The answer must be provided in valid JSON format with a single key "result".
+
+5. Date formats must be consistent and appropriate for the context.
+
+6. The answer must account for leap years, different month lengths, and weekday calculations when relevant.
+
+7. Relative time expressions must be interpreted correctly (e.g., "next week", "yesterday").
+
+8. The answer should not contradict established temporal facts.
+
+9. Time zones and daylight saving time should be considered if mentioned.
+
+10. The response must directly address the specific temporal question being asked.
+************
+[END RULE SET]
+
+Based on the rule set, carefully check the generated answer against the input. 
+
+Please provide your evaluation as a JSON object with the following structure:
+{
+  "correctness": "correct" or "incorrect",
+  "explanation": "Brief explanation of why the answer is correct or incorrect, focusing on which rules were followed or violated"
+} 
