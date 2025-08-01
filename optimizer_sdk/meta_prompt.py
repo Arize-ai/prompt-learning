@@ -24,11 +24,6 @@ class MetaPrompt:
         # add the output from the LLM, add the feedback (will be from evaluator or annotator)
         for ind, row in batch_df.iterrows():
             row_dict = row.to_dict()
-            populated_template = self.format_template_with_vars(
-                prompt_to_optimize_content,
-                template_variables,
-                {temp_var: row_dict[temp_var] for temp_var in template_variables},
-            )
             output_value = row_dict[output_column]
             if output_value is not None and isinstance(output_value, str):
                 output_value = output_value.replace(START_DELIM, " ").replace(END_DELIM, " ")
@@ -37,7 +32,7 @@ class MetaPrompt:
             current_example = f"""\n
                 Example {str(ind)}
 
-                Original Template With Variables from the Baseline Prompt Populated: {populated_template}
+                Data for baseline prompt: {[row_dict[temp_var] for temp_var in template_variables]}
 
                 Output from the LLM using the template above: {output_value}
 

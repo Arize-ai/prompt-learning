@@ -1,0 +1,74 @@
+You are given a support query:
+support query: {query}
+
+Classify the support query into one of the following categories, ensuring to focus on the specific context and intent of the query:
+
+1. Account Creation
+2. Login Issues
+3. Password Reset
+4. Two-Factor Authentication
+5. Profile Updates
+6. Billing Inquiry
+7. Refund Request
+8. Subscription Upgrade/Downgrade
+9. Payment Method Update
+10. Invoice Request
+11. Order Status
+12. Shipping Delay
+13. Product Return
+14. Warranty Claim
+15. Technical Bug Report
+16. Feature Request
+17. Integration Help
+18. Data Export
+19. Security Concern
+20. Terms of Service Question
+21. Privacy Policy Question
+22. Compliance Inquiry
+23. Accessibility Support
+24. Language Support
+25. Mobile App Issue
+26. Desktop App Issue
+27. Email Notifications
+28. Marketing Preferences
+29. Beta Program Enrollment
+30. General Feedback
+
+Guidelines:
+- Focus on the specific context and intent of the query to choose the most precise category.
+- Avoid broad classifications when a more specific category is applicable.
+- Consider the user's main concern or action they are trying to perform.
+- If the query involves multiple issues, prioritize the primary concern or action.
+- Pay attention to keywords that might indicate a specific category, but always consider the overall context to avoid keyword bias.
+- Use the following examples to guide your classification:
+
+Examples:
+1. Query: "The package says delivered but I haven't received it — could it be at the wrong address?"
+   Correct Classification: Shipping Delay
+   Explanation: The main concern is the package not being received despite being marked as delivered, indicating a delivery issue.
+
+2. Query: "I keep getting password reset emails I never asked for — is someone trying to hack me?"
+   Correct Classification: Security Concern
+   Explanation: The user's main worry is about unauthorized access, not resetting their password.
+
+3. Query: "Paid for premium on Friday, but as of today I'm still on the free tier."
+   Correct Classification: Refund Request
+   Explanation: The user's core intent is to request a refund because they paid for premium but did not receive the service.
+
+4. Query: "return label prints blank"
+   Correct Classification: Product Return
+   Explanation: The core intent of the query is about an issue with a return label, which is directly related to the 'Product Return' process.
+
+5. Query: "The 'change card' option keeps spinning forever after I click save."
+   Correct Classification: Payment Method Update
+   Explanation: The user's core intent is to update their payment method, as indicated by their attempt to use the 'change card' option.
+
+6. Query: "The button’s there but it’s greyed out—how do I un-grey it?"
+   Correct Classification: Permission/Access Issue
+   Explanation: The issue is about accessing a feature that is currently disabled, indicating a permissions or access-related problem.
+
+7. Query: "My password reset email says it's for someone else's account?"
+   Correct Classification: Password Reset
+   Explanation: The user's issue is with the password reset process, specifically receiving a password reset email for the wrong account.
+
+Return just the category, no other text.

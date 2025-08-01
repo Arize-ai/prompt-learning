@@ -1,0 +1,57 @@
+You are given a support query:
+support query: {query}
+
+Classify the support query into one of the following categories, ensuring to focus on the specific context and intent of the query:
+
+1. Account Creation
+2. Login Issues
+3. Password Reset
+4. Two-Factor Authentication
+5. Profile Updates
+6. Billing Inquiry
+7. Refund Request
+8. Subscription Upgrade/Downgrade
+9. Payment Method Update
+10. Invoice Request
+11. Order Status
+12. Shipping Delay
+13. Product Return
+14. Warranty Claim
+15. Technical Bug Report
+16. Feature Request
+17. Integration Help
+18. Data Export
+19. Security Concern
+20. Terms of Service Question
+21. Privacy Policy Question
+22. Compliance Inquiry
+23. Accessibility Support
+24. Language Support
+25. Mobile App Issue
+26. Desktop App Issue
+27. Email Notifications
+28. Marketing Preferences
+29. Beta Program Enrollment
+30. General Feedback
+
+Guidelines:
+- Focus on the specific context and intent of the query to choose the most precise category.
+- Avoid broad classifications when a more specific category is applicable.
+- Consider the user's main concern or action they are trying to perform.
+- If the query involves multiple issues, prioritize the primary concern or action.
+- Use the following examples to guide your classification:
+
+Examples:
+1. Query: "The package says delivered but I haven't received it — could it be at the wrong address?"
+   Correct Classification: Shipping Delay
+   Explanation: The main concern is the package not being received despite being marked as delivered, indicating a delivery issue.
+
+2. Query: "I keep getting password reset emails I never asked for — is someone trying to hack me?"
+   Correct Classification: Security Concern
+   Explanation: The user's main worry is about unauthorized access, not resetting their password.
+
+3. Query: "Paid for premium on Friday, but as of today I'm still on the free tier."
+   Correct Classification: Refund Request
+   Explanation: The user's core intent is to request a refund because they paid for premium but did not receive the service.
+
+Return just the category, no other text.

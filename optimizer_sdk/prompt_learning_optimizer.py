@@ -202,7 +202,7 @@ class PromptLearningOptimizer:
         output_column: str,
         evaluators: List[Callable] = [],
         feedback_columns: List[str] = [],
-        context_size_k: int = 8000,
+        context_size_k: int = 128000,
     ) -> Union[PromptVersion, Sequence]:
         """
         Optimize the prompt using the meta-prompt approach
@@ -234,6 +234,7 @@ class PromptLearningOptimizer:
         # Determine which columns to include in token counting
         # columns_to_count = self.template_variables + self.feedback_columns + [self.output_column]
         columns_to_count = list(dataset.columns)
+        print(columns_to_count)
 
         # Create batches based on token count
         context_size_tokens = context_size_k

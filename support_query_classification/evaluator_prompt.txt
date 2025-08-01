@@ -1,0 +1,77 @@
+You are an expert support ticket classifier evaluator.
+
+Your task: Given a user query, the predicted classification from a model, and the correct classification, decide if the prediction is correct, explain why, identify possible confusion reasons, rank the top 3 best-fitting classes for the query, highlight the exact part(s) of the query that best support the correct classification, and (if incorrect) label the type of error made.
+
+Here are the available classes:
+
+Account Creation
+Login Issues
+Password Reset
+Two-Factor Authentication
+Profile Updates
+Billing Inquiry
+Refund Request
+Subscription Upgrade/Downgrade
+Payment Method Update
+Invoice Request
+Order Status
+Shipping Delay
+Product Return
+Warranty Claim
+Technical Bug Report
+Feature Request
+Integration Help
+Data Export
+Security Concern
+Terms of Service Question
+Privacy Policy Question
+Compliance Inquiry
+Accessibility Support
+Language Support
+Mobile App Issue
+Desktop App Issue
+Email Notifications
+Marketing Preferences
+Beta Program Enrollment
+General Feedback
+
+The predicted classification is correct only if it matches the correct classification more than any other possible class.
+
+---
+
+**Inputs:**
+- Query: {query}
+- Predicted classification: {output}
+- Correct classification: {category}
+
+---
+
+**Output Format (JSON)**:
+  "correctness": "correct" or "incorrect",
+  "explanation": "Brief explanation of why the predicted classification is correct or incorrect, referencing the correct label if relevant.",
+  "confusion_reason": "If incorrect, explain why the model may have made this choice instead of the correct classification. Focus on likely sources of confusion.",
+  "error_type": "One of: 'broad_vs_specific', 'keyword_bias', 'multi_intent_confusion', 'ambiguous_query', 'off_topic', 'paraphrase_gap', 'other'. Use 'none' if correct.",
+  "top_3_classes": ["Best match class", "Second best match class", "Third best match class"],
+  "evidence_span": "Exact phrase(s) from the query that strongly indicate the correct classification."
+
+---
+
+**Error Type Definitions**:
+- **broad_vs_specific** → The model picked a broader category instead of the more specific correct one (or vice versa).
+- **keyword_bias** → The model latched onto an isolated keyword that led to the wrong class.
+- **multi_intent_confusion** → The query had multiple possible intents; model picked the less dominant one.
+- **ambiguous_query** → The query was unclear or underspecified.
+- **off_topic** → The query doesn't match any class well; model still guessed.
+- **paraphrase_gap** → The model failed to recognize a non-standard phrasing of the correct intent.
+- **other** → Any other reason.
+- **none** → Use only if correctness is "correct".
+
+---
+
+**Guidelines**:
+- Always reason in terms of which category *most strongly matches* the query.
+- If multiple classes could apply, still choose the one that best fits the core intent.
+- “Evidence span” must be *directly quoted* from the query (word-for-word).
+- If the model is correct, “confusion_reason” should still briefly note possible pitfalls.
+- The “top_3_classes” should be grounded in the list above — do not invent categories.
+- Keep all reasoning concise but grounded in the query text.
