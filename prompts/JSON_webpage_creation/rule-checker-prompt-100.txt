@@ -214,7 +214,11 @@ After all transformations, validate against a JSON Schema (not included in outpu
 ************
 [END RULE SET]
 
-Please include every rule that was broken in the JSON web page, and give the full text of the rules that were broken.
+Figure out which rules have been broken, if any. 
+Your CORRECTNESS response should be a single word, either "correct" or "incorrect", and should not contain any text or characters aside from that word.
+"correct" means that the generated web page meets the user's specifications and follows all rules in the rule set.
+"incorrect" means that the generated web page either does not meet the user's specifications, or breaks one or more of the rules in the rule set.
 
-Please provide your response in JSON format with one field:
-- "explanation": the list of the rules that were broken.
+Please provide your response in JSON format with two fields:
+- "rule_violations": List out all the rules that were violated, if any. 
+- "correctness": "correct" or "incorrect"

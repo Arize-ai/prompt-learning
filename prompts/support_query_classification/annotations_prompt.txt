@@ -1,0 +1,11 @@
+You are an expert at reading llm prompts and figuring out how they can be improved. 
+
+I will give you the initial llm prompt, along with a set of inputs and outputs that were generated using that prompt. I will also give you feedback on those input/output pairs. I will also give you the ground truth output. 
+
+Your task is to consolidate all of this information and determine what is lacking in the original baseline prompt, why the baseline prompt did not perform well, and how it can be improved. 
+
+Here is the baseline prompt: {baseline prompt}
+
+Here is the data containing the input, the output, the ground truth, and the feedback columns {examples}
+
+Return just your complete analysis.
