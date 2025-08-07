@@ -15,6 +15,7 @@ class MetaPrompt:
         template_variables: List[str],
         feedback_columns: List[str],
         output_column: str,
+        annotations: List[str],
     ) -> str:
         content = self.meta_prompt_messages
         content = content.replace("{baseline_prompt}", prompt_to_optimize_content)
@@ -50,6 +51,7 @@ class MetaPrompt:
                 current_example += f"\n{feedback_column}: {feedback_value}"
             examples += current_example
         content = content.replace("{examples}", examples)
+        content = content.replace("{annotations}", "\n".join(annotations))
         return content
 
     def format_template_with_vars(

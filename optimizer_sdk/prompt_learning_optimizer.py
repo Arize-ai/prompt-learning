@@ -9,6 +9,7 @@ from phoenix.evals.models import OpenAIModel
 from .meta_prompt import MetaPrompt
 from .tiktoken_splitter import TiktokenSplitter
 from .utils import get_key_value
+from .annotator import Annotator
 
 
 class PromptLearningOptimizer:
@@ -183,18 +184,34 @@ class PromptLearningOptimizer:
                 print(f"   ⚠️  Evaluator {i + 1} failed: {e}")
 
         return dataset, feedback_columns
+    
+    def create_annotation(
+        self,
+        prompt: str, 
+        template_variables: List[str],
+        dataset: Union[pd.DataFrame, str],
+        feedback_columns: List[str],
+        annotator_prompts: List[str],
+        output_column: str,
+        ground_truth_column: str = None,
+    ) -> List[str]:
+        """
+        Create an annotation for the dataset using the annotator
+        """
+        dataset = self._load_dataset(dataset)
+        self._validate_inputs(dataset, feedback_columns)
+        annotations = []
+        print(f"🔍 Running annotator...")
+        for i, annotator_prompt in enumerate(annotator_prompts):
+            try:
+                annotator = Annotator(annotator_prompt)
+                prompt = annotator.construct_content(dataset, prompt, template_variables, feedback_columns, output_column, ground_truth_column)
+                annotation = annotator.generate_annotation(prompt)
+                annotations.append(annotation)
+            except Exception as e:
+                print(f"   ⚠️  Annotator {i + 1} failed: {e}")
+        return annotations
 
-    def _create_dummy_dataframe(self) -> pd.DataFrame:
-        """Create dummy DataFrame for llm_generate to preserve template variables"""
-        # Create a dummy df to outsmart the mapping done in phoenix
-        # Should replace {var} with {var} so meta prompt is correct
-        dummy_data = {
-            "var": ["{var}"],  # Add hardcoded var column like in prompt_optimizer.py
-        }
-        for var in self.template_variables:
-            dummy_data[var] = ["{" + var + "}"]
-
-        return pd.DataFrame(dummy_data)
 
     def optimize(
         self,
@@ -202,6 +219,7 @@ class PromptLearningOptimizer:
         output_column: str,
         evaluators: List[Callable] = [],
         feedback_columns: List[str] = [],
+        annotations: List[str] = [],
         context_size_k: int = 128000,
     ) -> Union[PromptVersion, Sequence]:
         """
@@ -256,6 +274,7 @@ class PromptLearningOptimizer:
                     template_variables=self.template_variables,
                     feedback_columns=feedback_columns,
                     output_column=output_column,
+                    annotations=annotations,
                 )
 
                 model = OpenAIModel(

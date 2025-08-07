@@ -34,6 +34,9 @@ BELOW ARE THE EXAMPLES USING THE ABOVE PROMPT
 {examples}
 ************* end example data *************
 
+HERE ARE SOME ANNOTATIONS THAT MAY BE HELPFUL:
+{annotations}
+
 FINAL INSTRUCTIONS
 Iterate on the original prompt (above) with a new prompt that will improve the results, based on the examples and feedback above.
 

@@ -1,4 +1,4 @@
-query,category
+query,ground_truth
 "I can't get in on my laptop anymore, but my phone still works fine — could this be because I changed something in my account?","Login Issues"
 "Signed up ages ago but never got around to logging in — now it says no account found. Do I start over?","Account Creation"
 "Every time I try to buy the yearly plan it errors, but the charge still shows up on my card.","Subscription Upgrade/Downgrade"

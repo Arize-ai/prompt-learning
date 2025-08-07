@@ -42,17 +42,7 @@ The predicted classification is correct only if it matches the correct classific
 **Inputs:**
 - Query: {query}
 - Predicted classification: {output}
-- Correct classification: {category}
-
----
-
-**Output Format (JSON)**:
-  "correctness": "correct" or "incorrect",
-  "explanation": "Brief explanation of why the predicted classification is correct or incorrect, referencing the correct label if relevant.",
-  "confusion_reason": "If incorrect, explain why the model may have made this choice instead of the correct classification. Focus on likely sources of confusion.",
-  "error_type": "One of: 'broad_vs_specific', 'keyword_bias', 'multi_intent_confusion', 'ambiguous_query', 'off_topic', 'paraphrase_gap', 'other'. Use 'none' if correct.",
-  "top_3_classes": ["Best match class", "Second best match class", "Third best match class"],
-  "evidence_span": "Exact phrase(s) from the query that strongly indicate the correct classification."
+- Correct classification: {ground_truth}
 
 ---
 
@@ -68,10 +58,19 @@ The predicted classification is correct only if it matches the correct classific
 
 ---
 
+**Output Format (JSON)**:
+  "correctness": "correct" or "incorrect" based on whether predicted classification = correct classification,
+  "explanation": "Brief explanation of why the predicted classification is correct or incorrect, referencing the correct label if relevant.",
+  "confusion_reason": "If incorrect, explain why the model may have made this choice instead of the correct classification. Focus on likely sources of confusion. If correct, say 'no confusion'. ",
+  "error_type": "One of: 'broad_vs_specific', 'keyword_bias', 'multi_intent_confusion', 'ambiguous_query', 'off_topic', 'paraphrase_gap', 'other'. Use 'none' if correct. Make sure to include the definition of the chosen error type.",
+  "evidence_span": "Exact phrase(s) from the query that strongly indicate the correct classification."
+  "prompt_fix_suggestion": "One clear instruction to add to the classifier prompt to prevent this error."
+
+---
+
 **Guidelines**:
-- Always reason in terms of which category *most strongly matches* the query.
-- If multiple classes could apply, still choose the one that best fits the core intent.
+- You have access to the ground truth, correct classification. Make sure to form the output with respect to this.
 - “Evidence span” must be *directly quoted* from the query (word-for-word).
-- If the model is correct, “confusion_reason” should still briefly note possible pitfalls.
-- The “top_3_classes” should be grounded in the list above — do not invent categories.
+- If the model is correct, “confusion_reason” should say 'no confusion'.
 - Keep all reasoning concise but grounded in the query text.
+- For "error_type", make sure to include the definition of the error_type right after the error. For example, "error_type" could be "ambiguous_query → The query was unclear or underspecified"

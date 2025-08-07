@@ -43,6 +43,8 @@ class TiktokenSplitter:
         Args:
             model: The model to use for tokenization (default: gpt-4o)
         """
+        if model.startswith("o3"):
+            model = "o3"
         if model not in SUPPORTED_MODELS:
             raise ValueError(f"Model {model} not supported. Supported models: {SUPPORTED_MODELS}")
 

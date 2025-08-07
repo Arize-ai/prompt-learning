@@ -120,14 +120,11 @@ Ensure exactly one primary call-to-action per page.
 ************
 [END RULE SET]
 
-Use the rule set above and user input to determine a CORRECTNESS response, whether the generated JSON web page follows the rule set and fits the user description.
-Focus on the user input and the rule set when determining your answer.
+Figure out which rules have been broken, if any. 
 Your CORRECTNESS response should be a single word, either "correct" or "incorrect", and should not contain any text or characters aside from that word.
 "correct" means that the generated web page meets the user's specifications and follows all rules in the rule set.
 "incorrect" means that the generated web page either does not meet the user's specifications, or breaks one or more of the rules in the rule set.
 
-Include a brief EXPLANATION to show how you determined if the generated JSON web page was "correct" or "incorrect"
-
 Please provide your response in JSON format with two fields:
-- "correctness": either "correct" or "incorrect" based on if the generated JSON web page is correct.
-- "explanation": a brief explanation for why the JSON web page is correct or incorrect.
+- "rule_violations": List out all the rules that were violated, if any. 
+- "correctness": "correct" or "incorrect"
