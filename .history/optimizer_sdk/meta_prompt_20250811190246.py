@@ -50,8 +50,6 @@ class MetaPrompt:
                     feedback_value = "None"
                 current_example += f"\n{feedback_column}: {feedback_value}"
             examples += current_example
-            if ind == 0:
-                print("current_example", current_example)
         content = content.replace("{examples}", examples)
         content = content.replace("{annotations}", "\n".join(annotations))
         return content
