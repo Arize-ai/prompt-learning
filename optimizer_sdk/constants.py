@@ -44,6 +44,8 @@ A common best practice in prompt optimization is to add guidelines and the most 
 
 Note: Make sure to include the variables from the original prompt, which are wrapped in either single brackets or double brackets (e.g.
 {var}). If you fail to include these variables, the LLM will not be able to access the required data.
+Do not add any single or double brackets around anything other than the variables from the original prompt. The only curly brackets that should be used are the ones that wrap the variables from the original prompt.
+Make sure to copy paste the exact return instructions from the original prompt. Do not add any brackets here. 
 
 YOUR NEW PROMPT:
 """
