@@ -220,6 +220,7 @@ class PromptLearningOptimizer:
         evaluators: List[Callable] = [],
         feedback_columns: List[str] = [],
         annotations: List[str] = [],
+        ruleset: str = "",
         context_size_k: int = 128000,
     ) -> Union[PromptVersion, Sequence]:
         """
@@ -275,6 +276,7 @@ class PromptLearningOptimizer:
                     feedback_columns=feedback_columns,
                     output_column=output_column,
                     annotations=annotations,
+                    ruleset=ruleset,
                 )
 
                 model = OpenAIModel(
@@ -284,18 +286,20 @@ class PromptLearningOptimizer:
 
                 response = model(meta_prompt_content)
 
-                potential_new_prompt = response
-
-                # Validate that new prompt has same template variables
-
-                print(f"   ✅ Batch {i + 1}/{len(batch_dataframes)}: Optimized")
-                optimized_prompt_content = potential_new_prompt
+                if ruleset:
+                    ruleset = response
+                else:
+                    potential_new_prompt = response
+                    # Validate that new prompt has same template variables
+                    print(f"   ✅ Batch {i + 1}/{len(batch_dataframes)}: Optimized")
+                    optimized_prompt_content = potential_new_prompt
 
             except Exception as e:
                 print(f"   ❌ Batch {i + 1}/{len(batch_dataframes)}: Failed - {e}")
                 continue
 
-        # Create optimized prompt object
+        if ruleset:
+            return ruleset
         optimized_prompt = self._create_optimized_prompt(optimized_prompt_content)
         return optimized_prompt
 

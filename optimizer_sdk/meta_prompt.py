@@ -2,12 +2,12 @@ from typing import List, Mapping, Union
 
 import pandas as pd
 
-from .constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM
+from .constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM, CODING_AGENT_META_PROMPT_TEMPLATE
 
 
 class MetaPrompt:
     meta_prompt_messages = META_PROMPT_TEMPLATE
-
+    coding_agent_meta_prompt_messages = CODING_AGENT_META_PROMPT_TEMPLATE
     def construct_content(
         self,
         batch_df: pd.DataFrame,
@@ -15,9 +15,14 @@ class MetaPrompt:
         template_variables: List[str],
         feedback_columns: List[str],
         output_column: str,
-        annotations: List[str],
+        annotations: List[str] = [],
+        ruleset: str = "",
     ) -> str:
-        content = self.meta_prompt_messages
+        if ruleset != "":
+            content = self.coding_agent_meta_prompt_messages
+            content = content.replace("{ruleset}", ruleset)
+        else:
+            content = self.meta_prompt_messages
         content = content.replace("{baseline_prompt}", prompt_to_optimize_content)
         examples = ""
         # iterate over the batch of data and populate the template with the actual values from the dataframe
@@ -51,7 +56,8 @@ class MetaPrompt:
                 current_example += f"\n{feedback_column}: {feedback_value}"
             examples += current_example
         content = content.replace("{examples}", examples)
-        content = content.replace("{annotations}", "\n".join(annotations))
+        if annotations:
+            content = content.replace("{annotations}", "\n".join(annotations))
         return content
 
     def format_template_with_vars(
