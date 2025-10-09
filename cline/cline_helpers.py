@@ -9,8 +9,16 @@ import sys
 import time
 from pathlib import Path
 from typing import cast
+import shutil
 
-from container_helpers import materialize_repo_from_image, start_bound_container, stop_container, container_name_for
+from container_helpers import (
+    materialize_repo_from_image,
+    start_bound_container,
+    stop_container,
+    container_name_for,
+    ensure_git_baseline,
+    export_patch_from_workspace,
+)
 
 def is_port_open(host: str, port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -57,6 +65,24 @@ def shutil_which(cmd: str) -> str | None:
     from shutil import which
     return which(cmd)
 
+def kill_processes_listening_on_ports(ports: list[int]) -> None:
+    for port in ports:
+        try:
+            out = subprocess.run(
+                f"lsof -nP -iTCP:{port} -sTCP:LISTEN -t",
+                shell=True,
+                check=False,
+                text=True,
+                capture_output=True,
+            ).stdout.strip()
+            if not out:
+                continue
+            pids = {pid for pid in out.splitlines() if pid.isdigit()}
+            for pid in pids:
+                subprocess.run(f"kill -9 {pid}", shell=True, check=False)
+        except Exception:
+            pass
+
 
 def per_job_state_dir(proto_port: int) -> Path:
     """Return the cline state directory used by the server and readers.
@@ -69,6 +95,34 @@ def per_job_state_dir(proto_port: int) -> Path:
 
 def run_cmd(cmd: str, cwd: Path | None = None, env: dict | None = None, check: bool = True) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, cwd=str(cwd) if cwd else None, env=env, shell=True, check=check, text=True, capture_output=True)
+
+
+def ensure_python_venv_for_port(proto_port: int) -> Path:
+    base_dir = per_job_state_dir(proto_port)
+    venv_dir = base_dir.joinpath("python-venv")
+    bin_dir = venv_dir.joinpath("bin")
+    python_bin = bin_dir.joinpath("python")
+    if not python_bin.exists():
+        # Create a fresh virtual environment using the current interpreter
+        cmd = f"{shlex.quote(sys.executable)} -m venv {shlex.quote(str(venv_dir))}"
+        subprocess.run(cmd, shell=True, check=True)
+    return venv_dir
+
+
+def provision_python_venv_for_repo(venv_dir: Path, workspace: Path) -> None:
+    py = venv_dir.joinpath("bin", "python")
+    run_cmd(f"{shlex.quote(str(py))} -m pip install -U pip setuptools wheel", check=False)
+    reqs = [
+        workspace.joinpath("requirements.txt"),
+        workspace.joinpath("requirements-dev.txt"),
+        workspace.joinpath("requirements", "dev.txt"),
+        workspace.joinpath("requirements", "test.txt"),
+    ]
+    for rf in reqs:
+        if rf.exists():
+            run_cmd(f"{shlex.quote(str(py))} -m pip install -r {shlex.quote(str(rf))}", check=False)
+    if workspace.joinpath("pyproject.toml").exists() or workspace.joinpath("setup.py").exists() or workspace.joinpath("setup.cfg").exists():
+        run_cmd(f"{shlex.quote(str(py))} -m pip install -e {shlex.quote(str(workspace))}", check=False)
 
 
 def ensure_standalone_built(cline_repo: Path) -> None:
@@ -166,45 +220,6 @@ def read_final_plan(task_id: str, cline_dir: Path | None = None) -> str:
         return plan
     return ""
 
-def read_completion_result(task_id: str, cline_dir: Path | None = None) -> str | None:
-    """Return the latest attempt_completion result text (Task Completed summary) if present."""
-    cline_dir = cline_dir or Path.home().joinpath(".cline")
-    task_dir = cline_dir.joinpath("data", "tasks", task_id)
-    ui_messages = task_dir.joinpath("ui_messages.json")
-    if not ui_messages.exists():
-        return None
-    try:
-        with ui_messages.open("r", encoding="utf-8") as f:
-            arr = json.loads(f.read())
-        for msg in reversed(arr):
-            if msg.get("say") == "completion_result" and isinstance(msg.get("text"), str):
-                if "partial" in msg and msg.get("partial") is True:
-                    return None
-                txt = msg.get("text")
-                return txt.strip() if txt else None
-    except Exception:
-        return None
-    return None
-
-def read_api_conversation_history(task_id: str, cline_dir: Path | None = None) -> list[dict] | None:
-    """Load the full api conversation history for a task (all model/user messages).
-
-    This reflects exactly what the core will carry forward into ACT mode.
-    """
-    cline_dir = cline_dir or Path.home().joinpath(".cline")
-    task_dir = cline_dir.joinpath("data", "tasks", task_id)
-    history_path = task_dir.joinpath("api_conversation_history.json")
-    if not history_path.exists():
-        print("no history path")
-        return None
-    try:
-        with history_path.open("r", encoding="utf-8") as f:
-            arr = json.loads(f.read())
-        if isinstance(arr, list):
-            return arr
-    except Exception:
-        return None
-    return None
 
 def grpcurl_json(cline_repo: Path, host: str, port: int, method: str, payload: dict) -> dict:
     descriptor = cline_repo / "dist-standalone/proto/descriptor_set.pb"
@@ -229,33 +244,41 @@ def grpcurl_json(cline_repo: Path, host: str, port: int, method: str, payload: d
         return {}
 
 
-
 def start_cline_server_if_needed(
     cline_repo: Path, workspace: Path, host: str, proto_port: int, hostbridge_port: int
 ):
-    # Reuse your ensure_standalone_built / ensure_extension_symlink
+    # Simple, single-attempt launcher (as in cline_helpers.py)
     ensure_standalone_built(cline_repo)
     ensure_extension_symlink(cline_repo)
 
-    # If already up, just wait for readiness
-    if is_port_open(host, proto_port):
-        wait_for_grpc_ready(host, proto_port, timeout_s=90)
-        return None  # external server
+    if is_port_open(host, proto_port) or is_port_open(host, hostbridge_port):
+        kill_processes_listening_on_ports([proto_port, hostbridge_port])
+        time.sleep(0.5)
+
+    per_job_dir = per_job_state_dir(proto_port)
+    # Ensure an isolated Python venv per server instance and prefer it in PATH
+    venv_dir = ensure_python_venv_for_port(proto_port)
+    venv_bin = venv_dir.joinpath("bin")
+    provision_python_venv_for_repo(venv_dir, workspace)
 
     env = os.environ.copy()
+    env["PATH"] = f"{str(venv_bin)}:{env.get('PATH','')}"
+    env["VIRTUAL_ENV"] = str(venv_dir)
+    env["PYTHON"] = str(venv_bin.joinpath("python"))
     env.update(
         {
+            "E2E_TEST": "false",
             "WORKSPACE_DIR": str(workspace),
             "PROTOBUS_PORT": str(proto_port),
+            "DEV_WORKSPACE_FOLDER": str(workspace),
+            "TEST_HOSTBRIDGE_WORKSPACE_DIR": str(workspace),
             "HOSTBRIDGE_PORT": str(hostbridge_port),
             "E2E_API_SERVER_PORT": str(proto_port + 7777 - 30000),
             "CLINE_ENVIRONMENT": "local",
-            # Keep server/user state under a stable base so readers can locate it
-            "CLINE_DIR": str(per_job_state_dir(proto_port)),
-            # Ensure resume confirmation is skipped even if favorites didn't apply yet
+            "CLINE_DIR": str(per_job_dir),
             "CLINE_SKIP_RESUME_CONFIRMATION": "1",
-            # Auto-answer followups to avoid blocking
             "CLINE_AUTO_FOLLOWUP": "1",
+            "CLINE_STANDALONE_CAPTURE_STDIO": "1",
         }
     )
     log_path = Path(os.getenv("TMPDIR", "/tmp")).joinpath(f"cline-python-server-{proto_port}.log")
@@ -266,7 +289,11 @@ def start_cline_server_if_needed(
     )
     wait_for_grpc_ready(host, proto_port, timeout_s=90)
     print(f"[INFO] Starting standalone server; log: {log_path}", file=sys.stderr)
-    return proc  # caller can terminate later
+    try:
+        logf.flush()
+    except Exception:
+        pass
+    return proc
 
 def list_task_ids(cline_repo: Path, host: str, port: int) -> list[str]:
     out = grpcurl_json(cline_repo, host, port, "cline.TaskService/getTaskHistory", {})
@@ -343,28 +370,26 @@ def enable_auto_approve(cline_repo: Path, host: str, port: int) -> None:
     # Also toggle YOLO mode to enable approve-all path inside ToolExecutor/AutoApprove
     grpcurl_json(cline_repo, host, port, "cline.StateService/updateSettings", {"yolo_mode_toggled": True})
 
-def set_openai_gpt5(cline_repo: Path, host: str, port: int) -> None:
+def set_openai_gpt41(cline_repo: Path, host: str, port: int) -> None:
     payload = {
         "apiConfiguration": {
             "planModeApiProvider": "OPENAI",
             "actModeApiProvider": "OPENAI",
             "openAiApiKey": os.environ.get("OPENAI_API_KEY", ""),
-            "planModeOpenAiModelId": "gpt-4o",
-            "actModeOpenAiModelId": "gpt-4o",
-            "planModeOpenAiModelInfo": { "temperature": 0 },
-            "actModeOpenAiModelInfo": { "temperature": 0 },
+            "planModeOpenAiModelId": "gpt-4.1",
+            "actModeOpenAiModelId": "gpt-4.1",
         }
     }
     grpcurl_json(cline_repo, host, port, "cline.ModelsService/updateApiConfigurationProto", payload)
 
-def set_anthropic_claude37(cline_repo: Path, host: str, port: int) -> None:
+def set_anthropic_claude45(cline_repo: Path, host: str, port: int) -> None:
     payload = {
         "apiConfiguration": {
             "planModeApiProvider": "ANTHROPIC",
             "actModeApiProvider": "ANTHROPIC",
             "apiKey": os.environ.get("ANTHROPIC_API_KEY", ""),
-            "planModeApiModelId": "claude-3-7-sonnet-20250219",
-            "actModeApiModelId": "claude-3-7-sonnet-20250219",
+            "planModeApiModelId": "claude-sonnet-4-5-20250929:1m",
+            "actModeApiModelId": "claude-sonnet-4-5-20250929:1m",
         }
     }
     grpcurl_json(cline_repo, host, port, "cline.ModelsService/updateApiConfigurationProto", payload)
@@ -400,13 +425,8 @@ def apply_ruleset_if_provided(cline_repo: Path, workspace: Path, host: str, port
             {"isGlobal": False, "rulePath": str(rule_path), "enabled": True},
         )
         toggles_after = grpcurl_json(cline_repo, host, port, "cline.FileService/refreshRules", {})
-        # print(f"[RULES] Toggled rule on: {rule_path}", file=sys.stderr)
-        # print(f"[RULES] Toggles before: {json.dumps(toggles_before).strip()[:300]}", file=sys.stderr)
-        # print(f"[RULES] Toggles after:  {json.dumps(toggles_after).strip()[:300]}", file=sys.stderr)
     except Exception as e:
         print(f"[RULES] Failed to apply rules: {e}", file=sys.stderr)
-
-
 
 def run_cline_for_instance(
     instance_id: str,
@@ -417,6 +437,7 @@ def run_cline_for_instance(
     host: str,
     proto_port: int,
     hostbridge_port: int,
+    mode: str,
     wait_seconds: int = 600,
     ruleset_text: str = "",
 ) -> dict:
@@ -424,12 +445,14 @@ def run_cline_for_instance(
     1) Materialize repo from image to host workspace (if empty)
     2) Start container with bind mount of workspace
     3) Start Cline server (host) pointing at the workspace
-    4) Submit task; wait up to wait_seconds; return {'task_id', 'final_plan', 'log_dir'}
+    4) Submit task; wait up to wait_seconds; return either final plan or predictions path, based on cline mode
     """
     workspace = workspaces_root / instance_id.lower()
     workspace.mkdir(parents=True, exist_ok=True)
     # Step 1: copy /testbed from the image to host workspace (no-op if already populated)
     materialize_repo_from_image(image_tag, workspace)
+    # Ensure diffs are relative to a baseline commit
+    ensure_git_baseline(workspace)
     # Step 2: start the bound container (edit persistence via bind mount)
     stop_container(instance_id)
     start_bound_container(image_tag, instance_id, workspace)
@@ -441,10 +464,10 @@ def run_cline_for_instance(
         )
         # Avoid blocking prompts in ACT mode
         enable_auto_approve(cline_repo, host, proto_port)
-        toggle_mode(cline_repo, host, proto_port, "plan")
+        toggle_mode(cline_repo, host, proto_port, mode)
 
-        # set_openai_gpt5(cline_repo, host, proto_port)
-        set_anthropic_claude37(cline_repo, host, proto_port)
+        set_openai_gpt41(cline_repo, host, proto_port) 
+        # set_anthropic_claude45(cline_repo, host, proto_port)
 
         apply_ruleset_if_provided(
             cline_repo,
@@ -456,45 +479,40 @@ def run_cline_for_instance(
         # Step 4: submit task and wait for result
         task_id = submit_and_get_task_id(cline_repo, host, proto_port, task_text, timeout_s=30) or ""
         per_job_dir = per_job_state_dir(proto_port)
-        # Poll for final output (your helpers read from disk)
+        # Poll for final output (helpers read from disk)
         start = time.time()
 
         while time.time() - start < wait_seconds:
-                
-                # switch_message = "Switching to ACT MODE. Proceed."
-                # toggle_mode(cline_repo, host, proto_port, "act", message=switch_message)
-
-                # act_wait_deadline = time.time() + 600
-                # while time.time() < act_wait_deadline:
-                #     completion = read_completion_result(task_id, per_job_dir)
-                #     if completion:
-                #         break
-                #     time.sleep(1.0)
-
-                # return {
-                #     "task_id": task_id,
-                #     "final_plan": final_plan or "",
-                #     "completion": completion or "",
-                #     "failure": False,
-                #     "cline_state_dir": str(per_job_dir),
-                #     "workspace": str(workspace),
-                #     "container": container_name_for(instance_id),
-                # }
             time.sleep(0.5)
             ui_messages = read_ui_messages(task_id, per_job_dir)
             with open(f"ui_messages/{instance_id}.json", "w") as f:
                 json.dump(ui_messages, f, ensure_ascii=False, indent=2)
 
-        final_plan = read_final_plan(task_id, per_job_dir)
+        if mode == "plan":
+            final_plan = read_final_plan(task_id, per_job_dir)
 
-        return {
-            "task_id": task_id,
-            "final_plan": final_plan or "",
-            "failure": False,
-            "cline_state_dir": str(per_job_dir),
-            "workspace": str(workspace),
-            "container": container_name_for(instance_id),
-        }
+            return {
+                "task_id": task_id,
+                "final_plan": final_plan or "",
+                "failure": False,
+                "cline_state_dir": str(per_job_dir),
+                "workspace": str(workspace),
+                "container": container_name_for(instance_id),
+            }
+        else:
+            preds_path = export_patch_from_workspace(
+                instance_id=instance_id,
+                workspace=workspace,
+            )
+
+            return {
+                "task_id": task_id,
+                "predictions_path": str(preds_path),
+                "failure": False,
+                "cline_state_dir": str(per_job_dir),
+                "workspace": str(workspace),
+                "container": container_name_for(instance_id),
+            }
 
         
     finally:
@@ -510,3 +528,8 @@ def run_cline_for_instance(
                     server_proc.kill()
                 except Exception:
                     pass
+        if mode == "act":
+            try:
+                shutil.rmtree(per_job_state_dir(proto_port).joinpath("python-venv"), ignore_errors=True)
+            except Exception:
+                pass

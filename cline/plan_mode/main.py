@@ -9,7 +9,7 @@ import pandas as pd
 from swebench.harness.utils import load_swebench_dataset
 
 # Add optimizer_sdk to Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
 from constants import CLINE_PROMPT
 from evals import evaluate_results

@@ -46,11 +46,17 @@ def stop_container(instance_id: str) -> None:
     subprocess.run(f"docker rm -f {name}", shell=True, check=False, capture_output=True)
 
 
-def materialize_repo_from_image(image_tag: str, workspace_dir: Path) -> None:
+def materialize_repo_from_image(image_tag: str, workspace_dir: Path, force: bool = True) -> None:
     workspace_dir.mkdir(parents=True, exist_ok=True)
-    # Skip if workspace not empty
-    if any(workspace_dir.iterdir()):
+    if any(workspace_dir.iterdir()) and not force:
         return
+    if force:
+        for p in workspace_dir.iterdir():
+            if p.is_file():
+                p.unlink(missing_ok=True)
+            else:
+                import shutil
+                shutil.rmtree(p, ignore_errors=True)
     cid = sh(f"docker create {image_tag}").strip()
     try:
         sh(f"docker cp {cid}:/testbed/. {str(workspace_dir)}")
@@ -58,143 +64,100 @@ def materialize_repo_from_image(image_tag: str, workspace_dir: Path) -> None:
         subprocess.run(f"docker rm {cid}", shell=True, check=False, capture_output=True)
 
 
- 
-
-
-def copy_text_to_container(instance_id: str, content: str, dst_path: str) -> None:
-    name = container_name_for(instance_id)
-    with tempfile.NamedTemporaryFile("w", delete=False) as tf:
-        tf.write(content)
-        tf.flush()
-        sh(f"docker cp {tf.name} {name}:{dst_path}")
-
-
-def exec_in_container(instance_id: str, cmd: str, timeout=None) -> str:
-    name = container_name_for(instance_id)
-    # capture stdout+stderr
-    return sh(f"docker exec {name} bash -lc {json.dumps(cmd + ' 2>&1')}", timeout=timeout)
-
-def ensure_workspace_materialized(image_tag: str, workspace_dir: Path) -> None:
-    workspace_dir.mkdir(parents=True, exist_ok=True)
-    if any(workspace_dir.iterdir()):
-        return
-    materialize_repo_from_image(image_tag, workspace_dir)
-
-def build_and_copy_eval_script(instance_id: str, instance: dict) -> None:
-    spec = make_test_spec(instance)
-    eval_script = spec.eval_script
-    copy_text_to_container(instance_id, eval_script, "/eval.sh")
-
-def copy_log_to_host(instance_id: str, container_log: str = "/testbed/_eval_output.txt") -> Path:
-    name = container_name_for(instance_id)
-    host_log = Path(tempfile.mkstemp(prefix="swe_eval_", suffix=".txt")[1])
-    subprocess.run(f"docker cp {name}:{container_log} {host_log}", shell=True, check=True)
-    return host_log
-
-def sanitize_log_to_utf8(host_log_path: Path) -> Path:
-    data = host_log_path.read_bytes()
-    text = data.decode("utf-8", errors="replace")
-    clean_path = Path(tempfile.mkstemp(prefix="swe_eval_utf8_", suffix=".txt")[1])
-    clean_path.write_text(text, encoding="utf-8")
-    return clean_path
-
-def grade_run(instance: dict, host_log_path: Path) -> dict:
-    spec = make_test_spec(instance)
-    pred = {
-        "instance_id": instance["instance_id"],
-        "model_name_or_path": "cline",
-        "model_patch": "",
-    }
-    report = get_eval_report(
-        test_spec=spec,
-        prediction=pred,
-        test_log_path=host_log_path,
-        include_tests_status=True,
-    )
-    return report[instance["instance_id"]]
-
-def run_tests(instance: dict, image_tag: str, workspaces_root: Path) -> str:
-    
-    instance_id = instance["instance_id"]
-    ws = workspaces_root / instance_id.lower()
-
-    # ensure_workspace_materialized(image_tag, ws)
-    # stop_container(instance_id)
-    # start_bound_container(image_tag, instance_id, ws)
-
-    # reset_repo_in_container(instance_id, instance)  # uses make_test_spec(instance).language
-    build_and_copy_eval_script(instance_id, instance)
-
-    # capture stdout+stderr, tee to file, and emit exit code marker
-    cmd = r"""/bin/bash -lc 'set -o pipefail; /bin/bash /eval.sh 2>&1 | tee /testbed/_eval_output.txt; ec=${PIPESTATUS[0]}; echo "<<<EXIT_CODE:${ec}>>>"'"""
+def ensure_git_baseline(workspace_dir: Path) -> None:
+    print(f"[DEBUG] ensure_git_baseline: ws={workspace_dir}")
     try:
-        out = exec_in_container(instance_id, cmd, timeout=300)
-        return out
-    except subprocess.TimeoutExpired:
-        return "failed"
-
-
-
-
-
-def pass_or_fail(out: str) -> bool:
-    if "failed".lower() in out.lower() or "fail".lower() in out.lower():
-        return False
-    else:   
-        return True
-
-def reset_repo_in_container(instance_id: str, instance: dict) -> None:
-    lang = make_test_spec(instance).language
-    base_commit = instance["base_commit"]
-    repo_hint = instance.get("repo_url") or instance.get("repo") or ""
-    if repo_hint and not repo_hint.startswith("http"):
-        repo_url = f"https://github.com/{repo_hint}.git"
+        sh(f"git -C {shlex.quote(str(workspace_dir))} rev-parse --is-inside-work-tree")
+        print("[DEBUG] git repo exists")
+    except RuntimeError:
+        print("[DEBUG] git init")
+        sh(f"git -C {shlex.quote(str(workspace_dir))} init")
+    has_head = True
+    try:
+        sh(f"git -C {shlex.quote(str(workspace_dir))} rev-parse --verify HEAD")
+    except RuntimeError:
+        has_head = False
+    if not has_head:
+        print("[DEBUG] creating baseline commit")
+        sh(f"git -C {shlex.quote(str(workspace_dir))} -c user.email=a -c user.name=a add -A")
+        sh(f"git -C {shlex.quote(str(workspace_dir))} -c user.email=a -c user.name=a commit -m baseline --allow-empty")
     else:
-        repo_url = repo_hint or ""
-    cmds = [
-        "source /opt/miniconda3/bin/activate && conda activate testbed",
-        "cd /testbed",
-        # Ensure git discovery works across the bind mount boundary and repo is initialized
-        "export GIT_DISCOVERY_ACROSS_FILESYSTEM=1",
-        # Initialize or repair repo structure so subsequent git commands succeed
-        "git init",
-        # Avoid dubious ownership errors inside container bind mounts
-        "git config --global --add safe.directory /testbed",
-    ]
-    if repo_url:
-        cmds.extend([
-            # Ensure origin exists and points to the right URL
-            f"(git remote remove origin || true) && git remote add origin {repo_url}",
-            # Fetch the base commit object explicitly, shallowly
-            f"git fetch --force --depth=1 origin {base_commit}",
-        ])
-    cmds.extend([
-        f"git checkout -f {base_commit}",
-        "git clean -xfd",
-    ])
-    if lang == "py":
-        cmds.append("python -m pip install \"setuptools<70\"")
-        cmds.append("python -m pip install extension-helpers")
-        cmds.append("python -m pip install \"Cython<3\"")
-        cmds.append("(python -m pip install -e .) || (python -m pip install .) || (python -m pip install flit-core && python -m pip install -e . --no-build-isolation)")
-    exec_in_container(instance_id, " && ".join(cmds))
+        print("[DEBUG] baseline already present")
 
-
-def run_tests_for_row(
+def export_patch_from_workspace(
     instance_id: str,
-    instance: dict,
-) -> str:
-    """
-    Uses the official dataset to fetch the precise instance dict by instance_id,
-    then builds the eval script and runs it inside the container.
-    Requires row to provide at least: instance_id, local_image_tag.
-    """
+    workspace: Path,
+    out_predictions_path: Path | None = None,
+) -> Path:
+    """Create a unified diff between a pristine copy from the image and the current workspace.
 
-    # Fetch the ground-truth instance record (correct version, test directives, etc.)
-    
-    # Build eval script from the official instance (includes applying test_patch)
-    spec = make_test_spec(instance)
-    eval_script = spec.eval_script
+    Returns path to a predictions JSONL file suitable for run_evaluation.
+    """
+    print(f"[DEBUG] export_patch: ws={workspace}")
+    # Prefer a repo-relative diff from inside the workspace so paths apply cleanly in the harness
+    # Stage all tracked/new files (respects .gitignore), diff against HEAD, then unstage.
+    try:
+        print("[DEBUG] staging changes for diff (excluding sqlite/db artifacts)")
+        stage_cmd = " ".join([
+            f"git -C {shlex.quote(str(workspace))} -c core.fileMode=false add -A -- .",
+            "\":(exclude)**/*.sqlite3\"",
+            "\":(exclude)**/*.sqlite\"",
+            "\":(exclude)**/*.db\"",
+        ])
+        subprocess.run(stage_cmd, shell=True, check=False, capture_output=True, text=True)
+        # Extra debugging of staged/unstaged state prior to diff
+        try:
+            staged = sh(f"git -C {shlex.quote(str(workspace))} diff --cached --name-only")
+            print(f"[DEBUG] staged files:\n{staged}")
+            unstaged = sh(f"git -C {shlex.quote(str(workspace))} diff --name-only")
+            print(f"[DEBUG] unstaged files:\n{unstaged}")
+        except Exception as e:
+            print(f"[DEBUG] git state inspection failed: {e}")
+        # Use pathspec excludes to avoid non-source artifacts
+        diff_cmd = " ".join([
+            f"git -C {shlex.quote(str(workspace))} -c core.fileMode=false diff --cached -- .",
+            "\":(exclude)**/__pycache__/**\"",
+            "\":(exclude)**/*.pyc\"",
+            "\":(exclude)**/.git/**\"",
+            "\":(exclude)**/.clinerules/**\"",
+            "\":(exclude)**/*.egg-info/**\"",
+            "\":(exclude)**/build/**\"",
+            "\":(exclude)**/dist/**\"",
+            "\":(exclude)**/.venv/**\"",
+            "\":(exclude)**/venv/**\"",
+            "\":(exclude)**/*.sqlite3\"",
+            "\":(exclude)**/*.sqlite\"",
+            "\":(exclude)**/*.db\"",
+            "\":(exclude)**/*.html\"",
+            "\":(exclude)**/*.txt\"",
+            "\":(exclude)**/*.rst\"",
+            "\":(exclude)**/*.md\"",
+        ])
+        try:
+            patch_text = sh(diff_cmd)
+        except RuntimeError as e:
+            print(f"[DEBUG] git diff failed, emitting empty patch: {e}")
+            patch_text = ""
+        print(f"[DEBUG] diff bytes={len(patch_text)}")
+    finally:
+        # Best-effort unstage to leave workspace clean
+        subprocess.run(
+            f"git -C {shlex.quote(str(workspace))} reset -q",
+            shell=True,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
 
-    copy_text_to_container(instance_id, eval_script, "/eval.sh")
-    return exec_in_container(instance_id, "/bin/bash /eval.sh")
+    # patch_text is already filtered via pathspec excludes above
+    pred = {
+        "instance_id": instance_id,
+        "model_name_or_path": "cline",
+        "model_patch": patch_text,
+    }
+    out_predictions_path = out_predictions_path or Path(tempfile.mkstemp(prefix="preds_", suffix=".jsonl")[1])
+    with open(out_predictions_path, "w", encoding="utf-8") as f:
+        f.write(json.dumps(pred) + "\n")
+    print(f"[DEBUG] wrote predictions: {out_predictions_path}")
+    return out_predictions_path
+

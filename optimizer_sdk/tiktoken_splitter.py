@@ -45,6 +45,8 @@ class TiktokenSplitter:
         """
         if model.startswith("o3"):
             model = "o3"
+        if model.startswith("gpt-5"):
+            model = "gpt-4o"
         if model not in SUPPORTED_MODELS:
             raise ValueError(f"Model {model} not supported. Supported models: {SUPPORTED_MODELS}")
 

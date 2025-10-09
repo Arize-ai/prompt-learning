@@ -27,6 +27,7 @@ def run_cline(instance: dict, idx: int, ruleset_text: str) -> dict:
         host="127.0.0.1",
         proto_port=proto_port,
         hostbridge_port=hostbridge_port,
+        mode="plan",
         wait_seconds=180,
         ruleset_text=ruleset_text,
     )
