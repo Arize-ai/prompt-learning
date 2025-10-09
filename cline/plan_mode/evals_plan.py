@@ -56,8 +56,8 @@ def evaluate_results(results: pd.DataFrame) -> pd.DataFrame:
         evals.loc[idx, "patch"] = results.iloc[idx]["patch"]
         evals.loc[idx, "instance_id"] = results.iloc[idx]["instance_id"]
 
-    print("updating /Users/priyanjindal/cline-1/scripts/swe_bench_harnessed/training_evals.csv")
-    evals.to_csv("/Users/priyanjindal/cline-1/scripts/swe_bench_harnessed/training_evals.csv", index=False)
+
+    evals.to_csv("training_evals.csv", index=False)
 
     return evals
 

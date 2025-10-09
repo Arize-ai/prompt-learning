@@ -16,9 +16,10 @@ import docker
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from cline_helpers import run_cline_for_instance
+from constants import CLINE_REPO_PATH, MATERIALIZED_REPOS_PATH
 
-cline_repo = Path("/Users/priyanjindal/cline-1")
-workspaces_root = Path("/Users/priyanjindal/materialized_repos")
+cline_repo = Path(CLINE_REPO_PATH)
+workspaces_root = Path(MATERIALIZED_REPOS_PATH)
 
 def act_one(instance: dict, idx: int, ruleset: str) -> tuple[str, Path]:
     instance_id = instance["instance_id"]

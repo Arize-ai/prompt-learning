@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 from constants import CLINE_REPO_PATH, MATERIALIZED_REPOS_PATH
 from cline_helpers import run_cline_for_instance
 from pathlib import Path

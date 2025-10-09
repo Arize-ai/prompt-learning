@@ -1,6 +1,6 @@
 # Paths
-CLINE_REPO_PATH = "/Users/priyanjindal/cline-1"
-MATERIALIZED_REPOS_PATH = "/Users/priyanjindal/materialized_repos"
+CLINE_REPO_PATH = ""
+MATERIALIZED_REPOS_PATH = ""
 
 # Delimiters for template variables
 START_DELIM = "{"
