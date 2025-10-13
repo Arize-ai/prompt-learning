@@ -45,124 +45,72 @@ This feedback helps optimize prompts more precisely than a 2/5 rating ever could
 | **Control**      | Targeted prompt edits          | Full model tuning      | Whole prompt updates         |
 | **Deployment**   | Post-deployment & always-on    | Online or batch        | Typically offline            |
 
-## Experimental Design
 
-### Task: Webpage JSON Generation
-
-We task agents with generating structured JSON from user descriptions, then evaluate based on latent task rules (e.g., required fields, key vocab, style). These rules are not shown to the agent—only learned through failure and feedback.
-
-#### Example latent rules:
-Always return valid JSON—no trailing commas, unmatched braces, or comments.
-Numeric values stay numeric—do not quote prices, ratings, or quantities.
-Images need "src" and "alt"; omit "alt" only for decorative imagery.
-Use HTTPS URLs for all external assets; flag non-secure links in a "warnings" array.
-Every section object requires a "type" field drawn from a fixed vocabulary (header, text, image, productGrid, gallery, form, button, footer, embed).
-
-Initial prompts violate all the rules, creating clear failure cases for optimization. 
-
-### Evaluation Setup
-
-[LLM-as-a-Judge](https://arize.com/llm-as-a-judge/) (GPT-4) is used to evaluate outputs and generate feedback. These are the 2 forms of feedback we feed into the Optimizer LLM's Meta Prompt so that it can generate an optimized prompt.
-- **Explanation**: An explanation from the evaluator (i.e. human, or LLM-as-a-Judge) for why the agent output is correct or incorrect, focusing on the input query.
-- **Rule**: A specific evaluation focused on compliance with the ruleset.
-
-## Performance Results
-
-### Table 1: Prompt Learning Performance
-
-| **Ruleset Size** | **Num Loops** | **Feedback Type**      | **Baseline Accuracy** | **Baseline Accuracy with Ruleset** | **Test Accuracy** | **Latency**
-| ---------------- | ------------- | ---------------------- | --------------------- | ---------------------------------- | ----------------- | ------------ |
-| 10               | 1             | Explanation            | 0%                    | 40.40%                             | 71%               | 
-| 10               | 1             | Rule                   | 0%                    | 40.40%                             | 15.10%            |
-| **10**           | **1**         | **Explanation + Rule** | **0%**                | **40.40%**                         | **84%**           |
-| 10               | 5             | Explanation            | 0%                    | 40.40%                             | 100%              |
-| 10               | 5             | Rule                   | 0%                    | 40.40%                             | 0%                |
-| **10**           | **5**         | **Explanation + Rule** | **0%**                | **40.40%**                         | **100%**          | **1084.12s** |
-| 50               | 1             | Explanation            | 0%                    | 14.70%                             | 64%               |
-| 50               | 1             | Rule                   | 0%                    | 14.70%                             | 0%                |
-| **50**           | **1**         | **Explanation + Rule** | **0%**                | **14.70%**                         | **66%**           |
-| 50               | 5             | Explanation            | 0%                    | 14.70%                             | 69%               |
-| 50               | 5             | Rule                   | 0%                    | 14.70%                             | 0%                |
-| **50**           | **5**         | **Explanation + Rule** | **0%**                | **14.70%**                         | **82%**           | **1150.45s** |
-| 100              | 1             | Explanation            | 0%                    | 5.80%                              | 0%                |
-| 100              | 1             | Rule                   | 0%                    | 5.80%                              | 0%                |
-| **100**          | **1**         | **Explanation + Rule** | **0%**                | **5.80%**                          | **0%**            |
-| 100              | 5             | Explanation            | 0%                    | 5.80%                              | 38%               |
-| 100              | 5             | Rule                   | 0%                    | 5.80%                              | 0%                |
-| **100**          | **5**         | **Explanation + Rule** | **0%**                | **5.80%**                          | **67%**           | **1294.27s** |
-
-
-This is over a dataset of 100 webpage JSON queries. Accuracy is measured by number of query outputs (using the system prompt) following the entire ruleset. 
-
-### Key Findings
-
-1. **Single Loop Optimization**: Strong improvements in accuracy in just one loop of prompt optimization
-2. **Strong results with 5 loops**: In just 5 loops, we see strong results in prompt learning
-3. **Dramatic Improvement**: Prompt learning drastically outperforms un-optimized cases (near-zero baseline accuracy)
-4. **Cost Efficiency**: Low latency overall. Big ruleset size increases do not have big impacts on latency.
-5. **Evals Thrive in Combination**: Explanation is clearly the most effective eval feedback on its own. But you can see that when using both explanation and rule evals, the test accuracy jumps up significantly. This shows that having good evals that you can trust, despite them being weak individually, can work well when they are provided to the optimizer LLM together. 
-
-
-### Table 2: BIG-Bench Hard 
-
-BIG-Bench Hard (BBH) is a diverse evaluation suite for language models. Here is how prompt learning performed.
-
-| Task | Final GT | Init GT | GT Δ | Final LLM | Init LLM | LLM Δ | Type |
-|------|----------|---------|------|-----------|----------|-------|------|
-| boolean_expressions | 0.920 |   0.960  |   0.660   |  0.680  |    0.040  | 0.020  |  boolean |
-| web_of_lies     |     0.540  |  0.640   |  0.200  |   0.640   |   0.100  | 0.440  |  general |
-| word_sorting     |    0.840  |  0.880  |   0.760  |   0.780  |    0.040 |  0.020  |  sorting |
-| sports_understanding | 0.860  |  0.960  |   0.900   |  0.960  |    0.100  | 0.060  |  general |
-| object_counting   |   0.820  |  0.720   |  0.920   |  0.980     | -0.100 | 0.060 |   counting|
-| disambiguation_qa | 0.580 | 0.740 | -0.160 | 0.800 | 0.640 | 0.160 | general |
-| geometric_shapes | 0.560 | 0.500 | 0.060 | 0.560 | 0.560 | 0.000 | general |
-| hyperbaton | 0.980 | 0.900 | 0.080 | 0.720 | 0.560 | 0.160 | general |
-| logical_deduction_seven_objects | 0.760 | 0.780 | -0.020 | 0.880 | 0.920 | -0.040 | general |
-| logical_deduction_three_objects | 0.960 | 0.960 | 0.000 | 1.000 | 1.000 | 0.000 | general |
-| penguins_in_a_table | 0.700 | 0.700 | 0.000 | 0.000 | 0.820 | -0.820 | general |
-| reasoning_about_colored_objects | 0.780 | 0.000 | 0.780 | 0.820 | 0.000 | 0.820 | general |
-| salient_translation_error_detection | 0.760 | 0.660 | 0.100 | 0.660 | 0.680 | -0.020 | general |
-| snarks | 0.540 | 0.420 | 0.120 | 0.820 | 0.000 | 0.820 | general |
-| temporal_sequences | 1.000 | 0.980 | 0.020 | 0.940 | 0.940 | 0.000 | general |
-| tracking_shuffled_objects_five_objects | 0.340 | 0.360 | -0.020 | 0.520 | 0.540 | -0.020 | general |
-| tracking_shuffled_objects_seven_objects | 0.360 | 0.320 | 0.040 | 0.240 | 0.520 | -0.280 | general |
-| **AVERAGE / Δ SUM** | **0.693** | **0.610** | **1.000** | **0.663** | **0.598** | **0.780** | general |
 
 
 ## Repository Structure
 
 ```
 prompt-learning/
-├── optimizer_sdk/         # Core prompt learning SDK
-│   ├── meta_prompt.py         # Core meta-prompt implementation
+├── optimizer_sdk/              # Core prompt learning SDK
+│   ├── meta_prompt.py              # Core meta-prompt implementation
 │   ├── prompt_learning_optimizer.py # Prompt learning optimizer
-│   ├── tiktoken_splitter.py   # Token counting utilities
-│   ├── constants.py           # Configuration constants
-│   └── utils.py              # Utility functions
-├── big_bench_hard/
-│   ├── evaluator_prompts/         # Evaluator prompt templates for BBH tasks
+│   ├── tiktoken_splitter.py        # Token counting utilities
+│   ├── annotator.py                # Feedback annotation utilities
+│   ├── constants.py                # Configuration constants
+│   └── utils.py                    # Utility functions
+│
+├── big_bench_hard/             # Big Bench Hard benchmark experiments
+│   ├── evaluator_prompts/          # Task-specific evaluator prompts (24 tasks)
 │   │   ├── evaluator-bool.txt
 │   │   ├── evaluator-lies.txt
-│   │   ├── evaluator-object.txt
 │   │   ├── evaluator-sports.txt
-│   │   └── evaluator-wordsort.txt
-│   └── run_files/                # Scripts and experiment runners for BBH
-│       ├── pl_multidataset.py
-│       ├── run_bbh_experiments.py
+│   │   └── ... (21+ more task evaluators)
+│   └── run_files/                  # BBH experiment runners and datasets
+│       ├── bbh-download/               # Downloaded BBH task data (27 JSON files)
+│       ├── pl_multidataset.py          # Multi-dataset optimizer
+│       ├── run_bbh_experiments.py      # Main BBH experiment runner
 │       └── ...
-├── prompts/                      # Prompt templates for main (non-BBH) experiments
-│   ├── evaluator-prompt-10.txt
-│   ├── evaluator-prompt-50.txt
-│   ├── evaluator-prompt-100.txt
-│   ├── rule-checker-prompt-10.txt
-│   ├── rule-checker-prompt-50.txt
-│   └── rule-checker-prompt-100.txt
-├── notebooks/             # Jupyter notebooks for experiments      
-│   └── prompt_learning_cookbook.ipynb
-├── prompt_learning_run.py # Main experiment runner
-├── requirements.txt       # Python dependencies
-├── LICENSE.txt           # License file
-└── README.md             # This file
+│
+├── cline/                      # Agent-based coding experiments (Cline/SWE-bench)
+│   ├── act_mode/                   # Action-based agent experiments
+│   │   ├── logs/                       # Evaluation logs and results
+│   │   ├── ui_messages/                # Agent conversation traces
+│   │   ├── evals_act.py                # Action mode evaluator
+│   │   ├── run_act.py                  # Action mode runner
+│   │   ├── optimize_cline_act_AX.ipynb # ArizeAI Phoenix optimization
+│   │   └── optimize_cline_act_PX.ipynb # ArizeAI Phoenix experiments
+│   ├── plan_mode/                  # Planning-based agent experiments
+│   │   ├── evals_plan.py               # Planning mode evaluator
+│   │   └── run_cline_plan.py           # Planning mode runner
+│   ├── cline_helpers.py            # Shared utilities for Cline experiments
+│   ├── container_helpers.py        # Docker container management
+│   └── constants.py                # Configuration constants
+│
+├── prompts/                    # Experiment-specific prompt templates
+│   ├── JSON_webpage_generation/    # Webpage JSON generation prompts
+│   │   ├── evaluator-prompt-*.txt
+│   │   └── rule-checker-prompt-*.txt
+│   └── support_query_classification/ # Support query classification prompts
+│       ├── evaluator_prompt.txt
+│       └── annotations_prompt.txt
+│
+├── datasets/                   # Experiment datasets
+│   ├── BizNorm-100.csv             # Business normalization dataset
+│   ├── BizNorm-ruleset.md          # Ruleset for BizNorm task
+│   └── support_queries.csv         # Support query examples
+│
+├── notebooks/                  # Jupyter notebooks for experiments
+│   ├── BizNorm-100_evaluator_optimization.ipynb
+│   ├── support_query_classification.ipynb
+│   ├── arizeax_support_query_classification.ipynb
+│   ├── phoenix_support_query_classification.ipynb
+│   └── JSON_webpage_generation.ipynb
+│
+├── requirements.txt            # Python dependencies
+├── LICENSE.txt                 # Apache 2.0 License
+├── IP_NOTICE                   # Intellectual property notice
+└── README.md                   # This file
 ```
 
 ## Quick Start
@@ -204,16 +152,6 @@ optimized_prompt = optimizer.optimize(
     output_column='output',
     feedback_columns=['feedback']
 )
-```
-
-### Running Experiments
-
-```python
-# Single experiment
-python prompt_learning_run.py
-
-# Multi-rule experiments (10, 50, 100 rules)
-# Edit RUN_MULTI_RULE_EXPERIMENTS = True in prompt_learning_run.py
 ```
 
 ## Contributing
