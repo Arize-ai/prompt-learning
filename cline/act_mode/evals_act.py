@@ -48,7 +48,7 @@ def evaluate_results(results: pd.DataFrame) -> pd.DataFrame:
         dataframe = results,
         template = prompt,
         model=OpenAIModel(
-            model_name="gpt-4.1",
+            model_name="gpt-4o",
             model_kwargs={
                 "response_format": {"type": "json_object"},
             }
@@ -56,9 +56,8 @@ def evaluate_results(results: pd.DataFrame) -> pd.DataFrame:
         output_parser = output_parser
     )
 
-    for idx, row in results.iterrows():
-        results.loc[idx, "correctness"] = evals.loc[idx, "correctness"]
-        results.loc[idx, "explanation"] = evals.loc[idx, "explanation"]
+    results["correctness"] = evals["correctness"]
+    results["explanation"] = evals["explanation"]
 
     return results 
 

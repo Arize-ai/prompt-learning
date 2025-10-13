@@ -68,9 +68,7 @@ def ensure_git_baseline(workspace_dir: Path) -> None:
     print(f"[DEBUG] ensure_git_baseline: ws={workspace_dir}")
     try:
         sh(f"git -C {shlex.quote(str(workspace_dir))} rev-parse --is-inside-work-tree")
-        print("[DEBUG] git repo exists")
     except RuntimeError:
-        print("[DEBUG] git init")
         sh(f"git -C {shlex.quote(str(workspace_dir))} init")
     has_head = True
     try:
@@ -78,11 +76,8 @@ def ensure_git_baseline(workspace_dir: Path) -> None:
     except RuntimeError:
         has_head = False
     if not has_head:
-        print("[DEBUG] creating baseline commit")
         sh(f"git -C {shlex.quote(str(workspace_dir))} -c user.email=a -c user.name=a add -A")
         sh(f"git -C {shlex.quote(str(workspace_dir))} -c user.email=a -c user.name=a commit -m baseline --allow-empty")
-    else:
-        print("[DEBUG] baseline already present")
 
 def export_patch_from_workspace(
     instance_id: str,
