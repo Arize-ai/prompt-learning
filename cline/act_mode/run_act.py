@@ -12,6 +12,7 @@ from swebench.harness.test_spec.test_spec import make_test_spec
 from swebench.harness.docker_build import build_env_images, build_container, setup_logger, close_logger
 from swebench.harness.docker_utils import cleanup_container
 import docker
+import random
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -22,6 +23,9 @@ cline_repo = Path(CLINE_REPO_PATH)
 workspaces_root = Path(MATERIALIZED_REPOS_PATH)
 
 def act_one(instance: dict, idx: int, ruleset: str) -> tuple[str, Path]:
+    """
+    Allocates ports for the Cline server, runs Cline for one instance of SWE Bench, and returns the path to the patch Cline generated.
+    """
     instance_id = instance["instance_id"]
     image_tag = make_test_spec(instance).instance_image_key
 
@@ -30,8 +34,7 @@ def act_one(instance: dict, idx: int, ruleset: str) -> tuple[str, Path]:
     proto_port = base + 1
     hostbridge_port = base + 2
     
-    ruleset += """\nApply changes directly to repository files. Do not create fix/ or patch files; modify code in place.
-    """
+    ruleset = ""
     
     res = run_cline_for_instance(
         instance_id=instance_id,
@@ -49,21 +52,36 @@ def act_one(instance: dict, idx: int, ruleset: str) -> tuple[str, Path]:
     return instance_id, Path(res["predictions_path"])  # type: ignore
 
 def run_act(
+    run_id: str,
     dataset_name: str = "SWE-bench/SWE-bench_Lite",
     instance_ids: list[str] | None = None,
-    run_id: str = "",
     ruleset: str = "",
     workers: int = 16,
     count: int | None = None, # number of instances to run
 ) -> pd.DataFrame:
-    assert run_id, "run_id is required"
+    """
+    Runs Cline Act Mode on a dataset.
+
+    Args:
+        run_id: The ID of the run. You can view the results of the run in the logs directory. Make sure that the run_id is unique - otherwise, you will reuse the results of the previous run, instead of creating a new one.
+        dataset_name: The name of the dataset to run Cline on.
+        instance_ids: The IDs of the instances to run Cline on. If you don't want to run Cline on specific instances, you can set the instance_ids to None.
+        ruleset: The ruleset to use for Cline.
+        workers: The level of concurrency you want to use for Cline runs. Configure this relative to your machine's capabilities and your LLM rate limits.
+        count: The number of instances to run Cline on. This is useful if you want to run Cline on a random subset of the instances in the dataset.
+    
+    This function will trigger Cline runs in parallel.
+    It then uses the SWE Bench evaluator to run unit tests for each row of the dataset, testing Cline's generated patches.
+
+    Returns:
+        A pandas DataFrame with the results of the run.
+    """
     dataset = load_swebench_dataset(dataset_name, "test", instance_ids)
     if not dataset:
         print("No instances found.")
         return
 
-    import random
-    # Run Cline ACT across instances in parallel -> collect predictions
+    # Select the instances to run Cline on
     predictions_by_id: dict[str, Path] = {}
     if count:
         dataset = random.sample(dataset, count)
@@ -74,16 +92,12 @@ def run_act(
     else:
         selected_ids = [inst["instance_id"] for inst in dataset]
 
-    
-    
+    # Run Cline ACT across instances in parallel -> collect predictions
     with ThreadPoolExecutor(max_workers=workers) as ex:
         futures = {ex.submit(act_one, inst, i, ruleset): inst for i, inst in enumerate(dataset)}
         for f in as_completed(futures):
             iid, p = f.result()
             predictions_by_id[iid] = p
-
-    for key, item in predictions_by_id.items():
-        print(key, item)
 
     # Combine predictions into one JSONL
     combined_preds = Path(os.getenv("TMPDIR", "/tmp")).joinpath(f"cline_preds_{run_id}.jsonl")
@@ -157,6 +171,7 @@ def run_act(
     return df
 
 if __name__ == "__main__":
+    # Example usage
     rows = run_act(
         run_id="act_sympy_14308",
         # count=1,
