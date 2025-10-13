@@ -1,13 +1,16 @@
 import pandas as pd
 import json
 from typing import Dict
+from phoenix.evals.llm import LLM
+from phoenix.evals.utils import to_annotation_dataframe
+from phoenix.evals import ClassificationEvaluator, evaluate_dataframe
 
 
 def evaluate_results(results: pd.DataFrame) -> pd.DataFrame:
 
     results = results[results["cline_patch"].str.len() <= 200000]
 
-    from phoenix.evals import llm_generate, OpenAIModel
+    
 
     prompt = """
     You are an expert software engineer, tasked with reviewing a coding agent. 
@@ -38,26 +41,21 @@ def evaluate_results(results: pd.DataFrame) -> pd.DataFrame:
     "explanation": "brief explanation of your reasoning: why/why not the coding agent's output is correct, and why the coding agent may have taken that approach."
     """
 
-    def output_parser(response: str, row_index = int) -> Dict[str, str]:
-        try:
-            return json.loads(response)
-        except json.JSONDecodeError as e:
-            return {"__error__": str(e)}
+    print("using updated 2.0 script")
 
-    evals = llm_generate(
-        dataframe = results,
-        template = prompt,
-        model=OpenAIModel(
-            model_name="gpt-4o",
-            model_kwargs={
-                "response_format": {"type": "json_object"},
-            }
-        ),
-        output_parser = output_parser
+    evaluator = ClassificationEvaluator(
+        "correctness",
+        LLM(provider="openai", model="gpt-5"),
+        prompt,
+        choices={"correct": 1, "incorrect": 0}
     )
+    results_df = evaluate_dataframe(results, [evaluator])["correctness_score"]
 
-    results["correctness"] = evals["correctness"]
-    results["explanation"] = evals["explanation"]
+    results_df = pd.DataFrame(results_df.apply(json.loads).tolist(), index=results_df.index)
+
+    results["correctness"] = results_df["label"]
+    results["explanation"] = results_df["explanation"]
+    results["score"] = results_df["score"]
 
     return results 
 

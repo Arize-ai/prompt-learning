@@ -46,7 +46,7 @@ def act_one(instance: dict, idx: int, ruleset: str) -> tuple[str, Path]:
         proto_port=proto_port,
         hostbridge_port=hostbridge_port,
         mode="act",
-        wait_seconds=100,
+        wait_seconds=300,
         ruleset_text=ruleset,
     )
     return instance_id, Path(res["predictions_path"])  # type: ignore
