@@ -29,7 +29,7 @@ where
 
     let response = client
         .post(&url)
-        .json(&SidecarRequest { payload })
+        .json(&payload)  // Send payload directly, not wrapped
         .timeout(Duration::from_secs(30))
         .send()
         .await
@@ -57,22 +57,13 @@ where
         return Err(format!("HTTP {} - {}", status, error_body));
     }
 
-    // Parse response
-    let sidecar_response: SidecarResponse<R> = response
+    // Parse response directly (FastAPI returns data unwrapped)
+    let result: R = response
         .json()
         .await
         .map_err(|e| format!("Failed to parse response: {}", e))?;
 
-    // Check for application-level errors
-    if let Some(error) = sidecar_response.error {
-        log::error!("❌ Sidecar error: {}", error);
-        return Err(error);
-    }
-
-    // Extract data
-    sidecar_response
-        .data
-        .ok_or_else(|| "No data in response".to_string())
+    Ok(result)
 }
 
 /// Send GET request to sidecar service
