@@ -3,7 +3,7 @@ pub mod models;
 mod commands;
 
 use tauri::Manager;
-use commands::verbalize::verbalize;
+use commands::{verbalize, sample, export, session_save, session_load};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -63,6 +63,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             verbalize,
+            sample,
+            export,
+            session_save,
+            session_load,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
