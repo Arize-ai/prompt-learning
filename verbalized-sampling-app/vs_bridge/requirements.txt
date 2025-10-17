@@ -1,7 +1,12 @@
-# Python sidecar dependencies
-# Will be updated in Phase 2 with specific versions
+# Python sidecar dependencies for Verbalized Sampling Desktop App
 
-fastapi
-uvicorn
-pydantic
+# FastAPI ecosystem
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# PyInstaller for bundling
+pyinstaller==6.3.0
+
 # verbalized_sampling (local package from optimizer_sdk)
+# Will be added as local path dependency during build
