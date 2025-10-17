@@ -50,6 +50,9 @@ class VerbRequest(BaseModel):
     provider: Provider = Field(
         ..., description="Provider identifier"
     )
+    api_key: constr(min_length=1) = Field(
+        ..., description="API key for the provider"
+    )
     include_token_probabilities: bool = Field(
         default=False, description="Include token-level probabilities in response"
     )

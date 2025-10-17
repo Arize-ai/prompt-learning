@@ -5,11 +5,12 @@
 use crate::models::{DistributionResponse, VerbParams};
 use crate::sidecar::ipc;
 use serde_json::json;
-use tauri::State;
+use tauri::AppHandle;
 
 /// Tauri command for verbalize endpoint
 #[tauri::command]
 pub async fn verbalize(
+    app: AppHandle,
     params: VerbParams,
 ) -> Result<DistributionResponse, String> {
     log::info!("🎯 Verbalize command invoked");
@@ -17,6 +18,24 @@ pub async fn verbalize(
 
     // Validate parameters
     params.validate()?;
+
+    // Get API key for the provider
+    let provider_str = match params.provider {
+        crate::models::Provider::Openai => "openai",
+        crate::models::Provider::Anthropic => "anthropic",
+        crate::models::Provider::Cohere => "cohere",
+        crate::models::Provider::LocalVllm => "",
+        crate::models::Provider::Openrouter => "openrouter",
+    };
+
+    // Retrieve API key from store (skip for local VLLM)
+    let api_key = if provider_str.is_empty() {
+        String::new()
+    } else {
+        crate::commands::apikeys::get_api_key(app.clone(), provider_str.to_string())
+            .await
+            .map_err(|e| format!("API key not found for {}: {}. Please configure it in Settings.", provider_str, e))?
+    };
 
     // Send request to Python sidecar
     let endpoint = "/api/v1/verbalize";
@@ -28,6 +47,7 @@ pub async fn verbalize(
         "seed": params.seed,
         "model": params.model,
         "provider": params.provider,
+        "api_key": api_key,
         "include_token_probabilities": params.include_token_probabilities,
     });
 

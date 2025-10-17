@@ -49,9 +49,8 @@ class VerbalizationService:
                 status_code=400, detail=f"Unsupported provider: {request.provider}"
             )
 
-        # Initialize provider
-        # In production, API keys should come from secure storage
-        provider = provider_class()
+        # Initialize provider with API key from request
+        provider = provider_class(api_key=request.api_key)
 
         # Validate model
         if not provider.validate_model(request.model):
