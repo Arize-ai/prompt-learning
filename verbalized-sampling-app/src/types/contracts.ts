@@ -7,13 +7,14 @@
 // Provider Types
 // ============================================================================
 
-export type Provider = 'openai' | 'anthropic' | 'cohere' | 'local_vllm';
+export type Provider = 'openai' | 'anthropic' | 'cohere' | 'local_vllm' | 'openrouter';
 
 export const PROVIDER_MAX_K: Record<Provider, number> = {
   openai: 100,
   anthropic: 100,
   cohere: 100,
   local_vllm: 500,
+  openrouter: 100,
 };
 
 // ============================================================================

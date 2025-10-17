@@ -19,6 +19,14 @@ const PROVIDER_MODELS: Record<Provider, string[]> = {
   anthropic: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
   cohere: ['command', 'command-light', 'command-r', 'command-r-plus'],
   local_vllm: ['llama-3-70b', 'mixtral-8x7b', 'custom'],
+  openrouter: [
+    'anthropic/claude-3.5-sonnet',
+    'openai/gpt-4-turbo',
+    'google/gemini-pro-1.5',
+    'meta-llama/llama-3.1-70b-instruct',
+    'mistralai/mistral-large',
+    'qwen/qwen-2-72b-instruct',
+  ],
 };
 
 export function ProviderForm({
@@ -58,6 +66,7 @@ export function ProviderForm({
             <option value="openai">OpenAI</option>
             <option value="anthropic">Anthropic</option>
             <option value="cohere">Cohere</option>
+            <option value="openrouter">OpenRouter</option>
             <option value="local_vllm">Local vLLM</option>
           </select>
         </div>

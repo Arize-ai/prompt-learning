@@ -21,6 +21,7 @@ from ..providers import (
     AnthropicProvider,
     CohereProvider,
     LocalVLLMProvider,
+    OpenRouterProvider,
 )
 
 
@@ -39,6 +40,7 @@ class VerbalizationService:
             Provider.ANTHROPIC: AnthropicProvider,
             Provider.COHERE: CohereProvider,
             Provider.LOCAL_VLLM: LocalVLLMProvider,
+            Provider.OPENROUTER: OpenRouterProvider,
         }
 
         provider_class = providers.get(request.provider)

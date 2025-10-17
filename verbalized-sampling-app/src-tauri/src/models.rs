@@ -8,13 +8,14 @@ pub enum Provider {
     Anthropic,
     Cohere,
     LocalVllm,
+    Openrouter,
 }
 
 impl Provider {
     /// Get maximum k value for this provider
     pub fn max_k(&self) -> u32 {
         match self {
-            Provider::Openai | Provider::Anthropic | Provider::Cohere => 100,
+            Provider::Openai | Provider::Anthropic | Provider::Cohere | Provider::Openrouter => 100,
             Provider::LocalVllm => 500,
         }
     }

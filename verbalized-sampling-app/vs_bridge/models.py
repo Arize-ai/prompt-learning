@@ -15,10 +15,11 @@ class Provider(str, Enum):
     ANTHROPIC = "anthropic"
     COHERE = "cohere"
     LOCAL_VLLM = "local_vllm"
+    OPENROUTER = "openrouter"
 
     def max_k(self) -> int:
         """Get maximum k value for this provider"""
-        if self in (Provider.OPENAI, Provider.ANTHROPIC, Provider.COHERE):
+        if self in (Provider.OPENAI, Provider.ANTHROPIC, Provider.COHERE, Provider.OPENROUTER):
             return 100
         return 500
 
