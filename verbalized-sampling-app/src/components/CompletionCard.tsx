@@ -2,7 +2,7 @@
  * Completion card component for displaying individual completions
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { CompletionResponse } from '../types/contracts';
 
 interface CompletionCardProps {

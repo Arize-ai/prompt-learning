@@ -2,7 +2,6 @@
  * Distribution visualization component
  */
 
-import React from 'react';
 import type { VerbResponse } from '../types/contracts';
 import { CompletionCard } from './CompletionCard';
 

@@ -7,9 +7,11 @@ import type {
   Provider,
   CompletionResponse,
   TraceMetadata,
-  SessionDistribution,
   VerbResponse,
 } from './contracts';
+
+// Re-export for external use
+export type { SessionDistribution } from './contracts';
 
 // ============================================================================
 // Distribution State

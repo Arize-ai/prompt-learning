@@ -117,7 +117,7 @@ export function ProviderForm({
         {/* Temperature */}
         <div className="form-group">
           <label htmlFor="temperature">
-            Temperature: {formState.temperature.toFixed(2)}
+            Temperature: {(formState.temperature ?? 0.8).toFixed(2)}
           </label>
           <input
             type="range"
@@ -139,7 +139,7 @@ export function ProviderForm({
 
         {/* Tau (Temperature Scaling) */}
         <div className="form-group">
-          <label htmlFor="tau">Tau (Temperature Scaling): {formState.tau.toFixed(2)}</label>
+          <label htmlFor="tau">Tau (Temperature Scaling): {(formState.tau ?? 1.0).toFixed(2)}</label>
           <input
             type="range"
             id="tau"
