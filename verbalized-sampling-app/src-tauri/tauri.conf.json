@@ -35,15 +35,5 @@
       "binaries/vs-bridge"
     ]
   },
-  "plugins": {
-    "shell": {
-      "sidecar": true,
-      "scope": [
-        {
-          "name": "binaries/vs-bridge",
-          "sidecar": true
-        }
-      ]
-    }
-  }
+  "plugins": {}
 }
