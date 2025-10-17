@@ -1,0 +1,7 @@
+# Python sidecar dependencies
+# Will be updated in Phase 2 with specific versions
+
+fastapi
+uvicorn
+pydantic
+# verbalized_sampling (local package from optimizer_sdk)
