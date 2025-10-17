@@ -1,7 +1,9 @@
 mod sidecar;
 pub mod models;
+mod commands;
 
 use tauri::Manager;
+use commands::verbalize::verbalize;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -58,7 +60,10 @@ pub fn run() {
         .on_page_load(|window, _payload| {
             log::debug!("Page loaded in window: {}", window.label());
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            verbalize,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
