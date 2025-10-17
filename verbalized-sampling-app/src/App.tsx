@@ -1,50 +1,124 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+/**
+ * Main application component
+ */
+
+import { useState } from 'react';
+import { ProviderForm } from './components/ProviderForm';
+import { DistributionView } from './components/DistributionView';
+import { useVerbalize } from './hooks/useVerbalize';
+import './App.css';
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const {
+    formState,
+    updateField,
+    verbalize,
+    reset,
+    isLoading,
+    error,
+    distribution,
+  } = useVerbalize();
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const [showForm, setShowForm] = useState(true);
+
+  const handleSubmit = async () => {
+    await verbalize();
+    // Auto-scroll to results if successful
+    if (distribution) {
+      setTimeout(() => {
+        document.querySelector('.distribution-view')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }, 100);
+    }
+  };
+
+  const handleReset = () => {
+    reset();
+    setShowForm(true);
+  };
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <div className="app">
+      {/* Header */}
+      <header className="app-header">
+        <h1>🎲 Verbalized Sampling</h1>
+        <p className="subtitle">
+          Visualize probability distributions over LLM completions
+        </p>
+      </header>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+      {/* Main Content */}
+      <main className="app-main">
+        {/* Provider Form Section */}
+        <section className="form-section-container">
+          <div className="section-header">
+            <h2>Configuration</h2>
+            {distribution && (
+              <button
+                className="toggle-button"
+                onClick={() => setShowForm(!showForm)}
+              >
+                {showForm ? 'Hide Form' : 'Show Form'}
+              </button>
+            )}
+          </div>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+          {showForm && (
+            <ProviderForm
+              formState={formState}
+              onUpdate={updateField}
+              onSubmit={handleSubmit}
+              isLoading={isLoading}
+              error={error}
+            />
+          )}
+        </section>
+
+        {/* Distribution Results Section */}
+        {distribution && (
+          <section className="results-section">
+            <div className="section-header">
+              <h2>Results</h2>
+              <button className="reset-button" onClick={handleReset}>
+                New Distribution
+              </button>
+            </div>
+            <DistributionView distribution={distribution} />
+          </section>
+        )}
+
+        {/* Empty State */}
+        {!distribution && !isLoading && (
+          <div className="empty-state">
+            <p>Configure your parameters and click "Generate Distribution" to start</p>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>Generating distribution...</p>
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="app-footer">
+        <p>
+          Powered by Tauri + React + FastAPI |{' '}
+          <a
+            href="https://github.com/Arize-ai/prompt-learning"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            GitHub
+          </a>
+        </p>
+      </footer>
+    </div>
   );
 }
 
