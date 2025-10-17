@@ -9,7 +9,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from . import models
+# For PyInstaller: try relative import, fallback to absolute
+try:
+    from . import models
+except ImportError:
+    import vs_bridge.models as models
 
 # Create FastAPI application
 app = FastAPI(
@@ -40,7 +44,11 @@ async def verbalize(request: models.VerbRequest) -> models.VerbResponse:
     Creates a probability distribution over k LLM completions
     with temperature scaling and normalization.
     """
-    from .handlers.verbalize import verbalization_service
+    # For PyInstaller: try relative import, fallback to absolute
+    try:
+        from .handlers.verbalize import verbalization_service
+    except ImportError:
+        from vs_bridge.handlers.verbalize import verbalization_service
 
     return await verbalization_service.verbalize(request)
 
