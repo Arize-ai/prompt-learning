@@ -63,3 +63,6 @@ coverage/
 
 # OS
 Thumbs.db
+
+# Claude Code hooks
+.claude/hooks/logs/
