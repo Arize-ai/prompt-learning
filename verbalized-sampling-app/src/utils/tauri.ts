@@ -6,7 +6,6 @@ import { invoke } from '@tauri-apps/api/core';
 import type {
   VerbRequest,
   VerbResponse,
-  SampleRequest,
   SampleResponse,
   ExportRequest,
   ExportResponse,

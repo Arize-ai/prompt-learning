@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { ApiProvider, ApiKeyResponse } from '../types/contracts';
+import type { ApiProvider } from '../types/contracts';
 import {
   invokeStoreApiKey,
   invokeCheckApiKey,
