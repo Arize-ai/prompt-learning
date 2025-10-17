@@ -40,7 +40,7 @@ async def verbalize(request: models.VerbRequest) -> models.VerbResponse:
     Creates a probability distribution over k LLM completions
     with temperature scaling and normalization.
     """
-    from handlers.verbalize import verbalization_service
+    from .handlers.verbalize import verbalization_service
 
     return await verbalization_service.verbalize(request)
 
