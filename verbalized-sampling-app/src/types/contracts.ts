@@ -194,6 +194,18 @@ export function validateSessionSaveRequest(request: SessionSaveRequest): string 
 }
 
 // ============================================================================
+// API Key Management
+// ============================================================================
+
+export interface ApiKeyResponse {
+  provider: string;
+  has_key: boolean;
+  key_preview?: string;
+}
+
+export type ApiProvider = 'openrouter' | 'openai' | 'anthropic' | 'cohere';
+
+// ============================================================================
 // Default Values
 // ============================================================================
 

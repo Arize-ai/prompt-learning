@@ -3,7 +3,10 @@ pub mod models;
 mod commands;
 
 use tauri::Manager;
-use commands::{verbalize, sample, export, session_save, session_load};
+use commands::{
+    verbalize, sample, export, session_save, session_load,
+    store_api_key, get_api_key, check_api_key, delete_api_key, list_api_keys
+};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -67,6 +70,11 @@ pub fn run() {
             export,
             session_save,
             session_load,
+            store_api_key,
+            get_api_key,
+            check_api_key,
+            delete_api_key,
+            list_api_keys,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

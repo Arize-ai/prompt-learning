@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { ProviderForm } from './components/ProviderForm';
 import { DistributionView } from './components/DistributionView';
+import { ApiKeySettings } from './components/ApiKeySettings';
 import { useVerbalize } from './hooks/useVerbalize';
 import './App.css';
 
@@ -20,6 +21,7 @@ function App() {
   } = useVerbalize();
 
   const [showForm, setShowForm] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleSubmit = async () => {
     await verbalize();
@@ -43,11 +45,28 @@ function App() {
     <div className="app">
       {/* Header */}
       <header className="app-header">
-        <h1>🎲 Verbalized Sampling</h1>
-        <p className="subtitle">
-          Visualize probability distributions over LLM completions
-        </p>
+        <div className="header-content">
+          <div>
+            <h1>🎲 Verbalized Sampling</h1>
+            <p className="subtitle">
+              Visualize probability distributions over LLM completions
+            </p>
+          </div>
+          <button
+            className="settings-button"
+            onClick={() => setShowSettings(true)}
+            aria-label="API Key Settings"
+          >
+            ⚙️ Settings
+          </button>
+        </div>
       </header>
+
+      {/* API Key Settings Modal */}
+      <ApiKeySettings
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
 
       {/* Main Content */}
       <main className="app-main">

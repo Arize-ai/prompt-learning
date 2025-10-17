@@ -12,6 +12,8 @@ import type {
   ExportResponse,
   SessionSaveRequest,
   SessionLoadResponse,
+  ApiKeyResponse,
+  ApiProvider,
 } from '../types/contracts';
 
 /**
@@ -91,6 +93,78 @@ export async function invokeSessionLoad(
     return response;
   } catch (error) {
     console.error('Session load command failed:', error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+}
+
+/**
+ * Store an API key securely in Stronghold
+ */
+export async function invokeStoreApiKey(
+  provider: ApiProvider,
+  key: string
+): Promise<void> {
+  try {
+    await invoke<void>('store_api_key', { provider, key });
+  } catch (error) {
+    console.error('Store API key command failed:', error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+}
+
+/**
+ * Retrieve an API key from Stronghold
+ */
+export async function invokeGetApiKey(
+  provider: ApiProvider
+): Promise<string> {
+  try {
+    const key = await invoke<string>('get_api_key', { provider });
+    return key;
+  } catch (error) {
+    console.error('Get API key command failed:', error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+}
+
+/**
+ * Check if an API key exists for a provider
+ */
+export async function invokeCheckApiKey(
+  provider: ApiProvider
+): Promise<ApiKeyResponse> {
+  try {
+    const response = await invoke<ApiKeyResponse>('check_api_key', { provider });
+    return response;
+  } catch (error) {
+    console.error('Check API key command failed:', error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+}
+
+/**
+ * Delete an API key from Stronghold
+ */
+export async function invokeDeleteApiKey(
+  provider: ApiProvider
+): Promise<void> {
+  try {
+    await invoke<void>('delete_api_key', { provider });
+  } catch (error) {
+    console.error('Delete API key command failed:', error);
+    throw new Error(error instanceof Error ? error.message : String(error));
+  }
+}
+
+/**
+ * List all providers with stored API keys
+ */
+export async function invokeListApiKeys(): Promise<ApiKeyResponse[]> {
+  try {
+    const response = await invoke<ApiKeyResponse[]>('list_api_keys');
+    return response;
+  } catch (error) {
+    console.error('List API keys command failed:', error);
     throw new Error(error instanceof Error ? error.message : String(error));
   }
 }

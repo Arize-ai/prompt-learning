@@ -5,7 +5,8 @@
 import { useState } from 'react';
 import { invokeVerbalize } from '../utils/tauri';
 import { validateVerbRequest } from '../types/contracts';
-import type { VerbRequest, VerbResponse, Provider } from '../types/contracts';
+import { invokeCheckApiKey } from '../utils/tauri';
+import type { VerbRequest, VerbResponse, Provider, ApiProvider } from '../types/contracts';
 
 export function useVerbalize() {
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +38,22 @@ export function useVerbalize() {
     if (validationError) {
       setError(validationError);
       return;
+    }
+
+    // Check API key for provider (skip for local_vllm)
+    if (formState.provider !== 'local_vllm') {
+      try {
+        const apiKeyCheck = await invokeCheckApiKey(formState.provider as ApiProvider);
+        if (!apiKeyCheck.has_key) {
+          setError(
+            `No API key found for ${formState.provider}. Please configure your API key in Settings.`
+          );
+          return;
+        }
+      } catch (err) {
+        console.error('API key check failed:', err);
+        // Don't block on check failure, let the actual request fail
+      }
     }
 
     setIsLoading(true);
