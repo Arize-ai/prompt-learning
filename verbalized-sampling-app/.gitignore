@@ -40,3 +40,4 @@ binaries/
 
 # Sidecar builds
 vs_bridge/dist/
+pydist/
