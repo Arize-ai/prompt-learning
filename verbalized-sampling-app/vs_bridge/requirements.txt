@@ -8,5 +8,11 @@ pydantic==2.5.0
 # PyInstaller for bundling
 pyinstaller==6.3.0
 
+# LLM Provider SDKs
+openai>=1.0.0
+anthropic>=0.18.0
+cohere>=4.0.0
+httpx>=0.25.0  # For local vLLM
+
 # verbalized_sampling (local package from optimizer_sdk)
 # Will be added as local path dependency during build

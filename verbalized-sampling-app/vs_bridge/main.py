@@ -9,6 +9,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
+from . import models
+
 # Create FastAPI application
 app = FastAPI(
     title="Verbalized Sampling Sidecar",
@@ -31,9 +33,16 @@ async def health_check():
     return {"status": "ok", "version": "0.1.0"}
 
 @app.post("/api/v1/verbalize")
-async def verbalize():
-    """Verbalize endpoint - to be implemented in Phase 3"""
-    return {"message": "Verbalize endpoint - Phase 3"}
+async def verbalize(request: models.VerbRequest) -> models.VerbResponse:
+    """
+    Verbalize endpoint - Generate k weighted completions
+
+    Creates a probability distribution over k LLM completions
+    with temperature scaling and normalization.
+    """
+    from handlers.verbalize import verbalization_service
+
+    return await verbalization_service.verbalize(request)
 
 @app.post("/api/v1/sample")
 async def sample():
