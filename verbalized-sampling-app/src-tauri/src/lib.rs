@@ -1,4 +1,5 @@
 mod sidecar;
+pub mod models;
 
 use tauri::Manager;
 
