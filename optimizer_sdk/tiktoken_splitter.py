@@ -123,6 +123,52 @@ class TiktokenSplitter:
 
         return batches
 
+    def get_max_rows_for_context(self, df: pd.DataFrame, columns: List[str], context_size_tokens: int) -> int:
+        """
+        Calculate the maximum number of rows that can fit within the context window.
+        Uses binary search to efficiently find the maximum number of rows.
+
+        Args:
+            df: The dataframe to analyze
+            columns: List of column names to include in token counting
+            context_size_tokens: Maximum tokens allowed
+
+        Returns:
+            Maximum number of rows that fit within context window
+        """
+        if len(df) == 0:
+            return 0
+        
+        # Validate columns exist
+        missing_cols = [col for col in columns if col not in df.columns]
+        if missing_cols:
+            raise ValueError(f"Columns not found in dataframe: {missing_cols}")
+        
+        # Calculate tokens for each row
+        row_tokens = []
+        for i in range(len(df)):
+            tokens = self._count_row_tokens(df, columns, i)
+            row_tokens.append(tokens)
+        
+        # Binary search to find maximum rows that fit
+        left, right = 1, len(df)
+        max_rows = 0
+        
+        while left <= right:
+            mid = (left + right) // 2
+            
+            # Calculate total tokens for first 'mid' rows
+            total_tokens = sum(row_tokens[:mid])
+            
+            if total_tokens <= context_size_tokens:
+                max_rows = mid
+                left = mid + 1
+            else:
+                right = mid - 1
+        
+        print(f"🔧 Calculated max rows for context: {max_rows} rows fit within {context_size_tokens:,} tokens")
+        return max_rows
+
     def get_batch_dataframes(self, df: pd.DataFrame, columns: List[str], context_size_tokens: int) -> List[pd.DataFrame]:
         """
         Get list of dataframe batches that fit within context window.

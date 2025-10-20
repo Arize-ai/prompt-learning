@@ -10,6 +10,9 @@ from .meta_prompt import MetaPrompt
 from .tiktoken_splitter import TiktokenSplitter
 from .utils import get_key_value
 from .annotator import Annotator
+import time
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from arize.experimental.prompt_hub import Prompt, LLMProvider
 
 
 class PromptLearningOptimizer:
@@ -265,9 +268,7 @@ class PromptLearningOptimizer:
         optimized_prompt_content = prompt_content
 
         for i, batch in enumerate(batch_dataframes):
-
             try:
-
                 # Construct meta-prompt content
                 meta_prompt_content = self.meta_prompter.construct_content(
                     batch_df=batch,
@@ -302,6 +303,450 @@ class PromptLearningOptimizer:
             return ruleset
         optimized_prompt = self._create_optimized_prompt(optimized_prompt_content)
         return optimized_prompt
+
+    def optimize_with_experiments(
+        self,
+        train_dataset: pd.DataFrame,
+        test_dataset: pd.DataFrame,
+        train_dataset_id: str,
+        test_dataset_id: str,
+        evaluators: List[Callable],
+        test_evaluator: Callable,
+        task_fn: Callable,
+        arize_client,
+        arize_space_id: str,
+        experiment_name_prefix: str,
+        prompt_hub_client,
+        prompt_name: str,
+        model_name: str,
+        feedback_columns: List[str],
+        annotations_prompt_path: str = None,
+        threshold: float = 1.0,
+        loops: int = 5,
+        scorer: str = "accuracy",
+        context_size_k: int = 90000,
+    ) -> Union[PromptVersion, Sequence, str]:
+        """
+        Optimize the prompt with full experiment workflow including sampling, evaluation, and iteration.
+        
+        This method handles the complete optimization pipeline:
+        1. Pre-samples training data to fit context window (efficient!)
+        2. Runs experiments with evaluators on sampled data
+        3. Iteratively optimizes the prompt
+        4. Tests each iteration on held-out test set
+        5. Uploads prompt versions to Arize Prompt Hub
+        
+        Args:
+            train_dataset: Training dataset DataFrame
+            test_dataset: Test dataset DataFrame
+            train_dataset_id: Arize dataset ID for training data
+            test_dataset_id: Arize dataset ID for test data
+            evaluators: List of evaluators to run on training data (e.g., [output_evaluator])
+            test_evaluator: Evaluator to run on test data
+            task_fn: Function that takes system_prompt and returns an async task function
+            arize_client: ArizeDatasetsClient instance
+            arize_space_id: Arize space ID
+            experiment_name_prefix: Prefix for experiment names (loop number will be appended)
+            prompt_hub_client: ArizePromptClient instance
+            prompt_name: Name for prompt in Arize Prompt Hub
+            model_name: Model name for the task
+            feedback_columns: List of feedback column names to extract
+            annotations_prompt_path: Path to annotations prompt file (optional, default: None)
+            threshold: Performance threshold to stop optimization (default: 1.0)
+            loops: Maximum number of optimization iterations (default: 5)
+            scorer: Metric to use for evaluation (default: "accuracy")
+            context_size_k: Context window size in tokens for sampling (default: 90000)
+            
+        Returns:
+            Optimized prompt in the same format as the input prompt
+        """
+        print(f"🚀 Starting prompt optimization with {loops} iterations (scorer: {scorer}, threshold: {threshold})")
+        
+        # Initialize optimization results tracking
+        optimization_results = []
+        
+        # Extract initial prompt content
+        initial_prompt_content = self._extract_prompt_content()
+        current_prompt_content = initial_prompt_content
+        
+        # Run initial evaluation on test set
+        print(f"\n📊 Initial evaluation:")
+        print(f"⏳ Running initial evaluation experiment...")
+        task = task_fn(current_prompt_content)
+        
+        initial_experiment_id, _ = arize_client.run_experiment(
+            space_id=arize_space_id,
+            dataset_id=test_dataset_id,
+            task=task,
+            evaluators=[test_evaluator],
+            experiment_name=f"{experiment_name_prefix}_initial",
+            concurrency=10
+        )
+        
+        print(f"⏳ Retrieving experiment results...")
+        time.sleep(3)
+        
+        initial_metric_value = self._compute_metric(
+            arize_client, arize_space_id, initial_experiment_id, 
+            "eval.test_evaluator.score", scorer
+        )
+        print(f"✅ Initial {scorer}: {initial_metric_value:.3f}")
+        
+        # Upload initial prompt to Prompt Hub
+        print(f"⏳ Uploading initial prompt version to Prompt Hub...")
+        prompt_version_id = self._add_prompt_version(
+            prompt_hub_client, current_prompt_content, prompt_name, 
+            model_name, initial_metric_value, 0
+        )
+        print(f"✅ Uploaded to Prompt Hub")
+        
+        if initial_metric_value >= threshold:
+            print("\n🎉 Initial prompt already meets threshold!")
+            return self._create_optimized_prompt(current_prompt_content)
+        
+        # Calculate sampling parameters once
+        splitter = TiktokenSplitter(model=self.model_choice)
+        columns_to_count = list(train_dataset.columns)
+        max_rows = splitter.get_max_rows_for_context(train_dataset, columns_to_count, context_size_k)
+        print(f"🔢 Maximum number of rows for training context: {max_rows}")
+        
+        should_sample = len(train_dataset) > max_rows
+        if should_sample:
+            print(f"🔧 EFFICIENCY SETUP: Will sample {max_rows} examples from {len(train_dataset)} total training examples each loop")
+            print(f"   💰 This saves ~{(len(train_dataset) - max_rows) * len(evaluators)} evaluator calls per loop!")
+        else:
+            print(f"📊 Training dataset ({len(train_dataset)} examples) fits within context window")
+        
+        # Main optimization loop
+        curr_loop = 1
+        train_df = train_dataset.copy()
+        threshold_met = False
+        
+        while loops > 0:
+            print(f"\n{'='*80}")
+            print(f"📊 Loop {curr_loop}: Optimizing prompt...")
+            print(f"{'='*80}")
+            
+            # Sample training data if needed
+            if should_sample:
+                train_df_to_process = train_df.sample(n=max_rows).reset_index(drop=True)
+                print(f"   🎲 Sampled {len(train_df_to_process)} examples for this loop")
+            else:
+                train_df_to_process = train_df
+            
+            # Run training experiment
+            print(f"⏳ Running training experiment...")
+            task = task_fn(current_prompt_content)
+            train_experiment_id, _ = arize_client.run_experiment(
+                space_id=arize_space_id,
+                experiment_name=f"{experiment_name_prefix}_train_loop_{curr_loop}",
+                task=task,
+                dataset_df=train_df_to_process,  # Pass sampled dataframe
+                dataset_id=train_dataset_id,  # Still provide dataset_id for reference
+                evaluators=evaluators + [test_evaluator],
+                concurrency=10
+            )
+            
+            print(f"⏳ Retrieving training experiment results...")
+            time.sleep(3)
+            
+            # Compute training metric
+            train_metric = self._compute_metric(
+                arize_client, arize_space_id, train_experiment_id,
+                "eval.output_evaluator.score", "accuracy"
+            )
+            print(f"✅ Training {scorer}: {train_metric:.3f}")
+            
+            # Process experiment results to get feedback
+            print(f"⏳ Processing experiment results and extracting feedback...")
+            train_df_with_feedback = self._process_experiment(
+                arize_client, arize_space_id, train_experiment_id,
+                train_df_to_process, "query", "output", feedback_columns
+            )
+            
+            # Detect template variables (needed for optimization)
+            self.template_variables = self._detect_template_variables(current_prompt_content)
+            
+            # Create annotations if path is provided
+            annotations_list = []
+            if annotations_prompt_path is not None:
+                print(f"⏳ Generating annotations...")
+                with open(annotations_prompt_path, "r") as file:
+                    annotations_prompt = file.read()
+                
+                annotator = Annotator(annotations_prompt)
+                annotation = annotator.generate_annotation(
+                    annotator.construct_content(
+                        train_df_with_feedback, current_prompt_content,
+                        self.template_variables, feedback_columns, "output", "ground_truth"
+                    )
+                )
+                annotations_list = [annotation]
+            
+            # Optimize the prompt
+            print(f"⏳ Optimizing prompt with meta-prompt...")
+            current_prompt_content = self._optimize_single_batch(
+                train_df_with_feedback, "output", feedback_columns, annotations_list, current_prompt_content
+            )
+            print(f"✅ Prompt optimization complete")
+            
+            # Run test experiment
+            print(f"⏳ Running test evaluation experiment...")
+            test_experiment_id, _ = arize_client.run_experiment(
+                space_id=arize_space_id,
+                dataset_id=test_dataset_id,
+                task=task_fn(current_prompt_content),
+                evaluators=[test_evaluator],
+                experiment_name=f"{experiment_name_prefix}_test_loop_{curr_loop}",
+                concurrency=10
+            )
+            
+            print(f"⏳ Retrieving test experiment results...")
+            time.sleep(3)
+            
+            # Compute test metric
+            test_metric = self._compute_metric(
+                arize_client, arize_space_id, test_experiment_id,
+                "eval.test_evaluator.score", scorer
+            )
+            print(f"✅ Test {scorer}: {test_metric:.3f}")
+            
+            # Upload prompt version to Prompt Hub
+            print(f"⏳ Uploading prompt version to Prompt Hub...")
+            prompt_version_id = self._add_prompt_version(
+                prompt_hub_client, current_prompt_content, prompt_name,
+                model_name, test_metric, curr_loop
+            )
+            print(f"✅ Uploaded to Prompt Hub")
+            
+            # Track results for this loop
+            loop_result = {
+                'loop_id': curr_loop,
+                'train_experiment_id': train_experiment_id,
+                'test_experiment_id': test_experiment_id,
+                'train_metric': train_metric,
+                'test_metric': test_metric,
+                'prompt_version_id': prompt_version_id,
+                'initial_test_experiment_id': initial_experiment_id if curr_loop == 1 else None
+            }
+            optimization_results.append(loop_result)
+            
+            # Check if threshold met
+            if test_metric >= threshold:
+                print("\n🎉 Prompt optimization met threshold!")
+                threshold_met = True
+                break
+            
+            loops -= 1
+            curr_loop += 1
+        
+        # Display optimization summary
+        final_metric = optimization_results[-1]['test_metric'] if optimization_results else initial_metric_value
+        self._print_optimization_summary(
+            optimization_results=optimization_results,
+            initial_metric=initial_metric_value,
+            final_metric=final_metric,
+            scorer=scorer,
+            prompt_name=prompt_name,
+            threshold_met=threshold_met
+        )
+        
+        return self._create_optimized_prompt(current_prompt_content)
+    
+    def _optimize_single_batch(
+        self,
+        dataset: pd.DataFrame,
+        output_column: str,
+        feedback_columns: List[str],
+        annotations: List[str],
+        current_prompt_content: str,
+    ) -> str:
+        """Helper method to optimize a single batch of data"""
+        meta_prompt_content = self.meta_prompter.construct_content(
+            batch_df=dataset,
+            prompt_to_optimize_content=current_prompt_content,
+            template_variables=self.template_variables,
+            feedback_columns=feedback_columns,
+            output_column=output_column,
+            annotations=annotations,
+            ruleset="",
+        )
+        
+        model = OpenAIModel(
+            model=self.model_choice,
+            api_key=self.openai_api_key.get_secret_value(),
+        )
+        
+        response = model(meta_prompt_content)
+        return response
+    
+    def _compute_metric(
+        self,
+        arize_client,
+        space_id: str,
+        experiment_id: str,
+        prediction_column_name: str,
+        scorer: str = "accuracy",
+        average: str = "macro"
+    ) -> float:
+        """Compute classification metric from an Arize experiment"""
+        experiment_df = arize_client.get_experiment(space_id, experiment_id=experiment_id)
+        
+        y_pred = experiment_df[prediction_column_name]
+        y_true = [1] * len(experiment_df)
+        
+        if scorer == "accuracy":
+            return accuracy_score(y_true, y_pred)
+        elif scorer == "f1":
+            return f1_score(y_true, y_pred, zero_division=0, average=average)
+        elif scorer == "precision":
+            return precision_score(y_true, y_pred, zero_division=0, average=average)
+        elif scorer == "recall":
+            return recall_score(y_true, y_pred, zero_division=0, average=average)
+        else:
+            raise ValueError(f"Unknown scorer: {scorer}")
+    
+    def _process_experiment(
+        self,
+        arize_client,
+        space_id: str,
+        experiment_id: str,
+        train_set: pd.DataFrame,
+        input_column_name: str,
+        output_column_name: str,
+        feedback_columns: List[str]
+    ) -> pd.DataFrame:
+        """Process experiment results and extract feedback into dataframe"""
+        experiment_df = arize_client.get_experiment(space_id, experiment_id=experiment_id)
+        
+        train_set_with_experiment_results = pd.merge(
+            train_set, experiment_df, left_on='id', right_on='example_id', how='inner'
+        )
+        
+        # Initialize feedback columns
+        for column in feedback_columns:
+            train_set[column] = [None] * len(train_set)
+        
+        # Extract feedback from experiment results
+        for idx, row in train_set_with_experiment_results.iterrows():
+            index = row["example_id"]
+            eval_output = row["eval.output_evaluator.explanation"]
+            if feedback_columns:
+                for item in eval_output.split(";"):
+                    key_value = item.split(":")
+                    if len(key_value) >= 2 and key_value[0].strip() in feedback_columns:
+                        key, value = key_value[0].strip(), key_value[1].strip()
+                        train_set.loc[train_set["id"] == index, key] = value
+        
+        train_set[output_column_name] = train_set_with_experiment_results["result"]
+        train_set.rename(columns={"query": input_column_name}, inplace=True)
+        
+        return train_set
+    
+    def _print_optimization_summary(
+        self,
+        optimization_results: List[Dict],
+        initial_metric: float,
+        final_metric: float,
+        scorer: str,
+        prompt_name: str,
+        threshold_met: bool = False
+    ):
+        """
+        Display a professional summary of the optimization results
+        
+        Args:
+            optimization_results: List of dictionaries containing loop results
+            initial_metric: Initial test metric value
+            final_metric: Final test metric value
+            scorer: Name of the metric used
+            prompt_name: Name of the prompt in Prompt Hub
+            threshold_met: Whether the threshold was met
+        """
+        print("\n")
+        print("╔════════════════════════════════════════════════════════════════════════════════╗")
+        print("║                      PROMPT OPTIMIZATION SUMMARY                               ║")
+        print("╚════════════════════════════════════════════════════════════════════════════════╝")
+        print()
+        
+        # Summary statistics
+        num_iterations = len(optimization_results)
+        improvement = ((final_metric - initial_metric) / initial_metric * 100) if initial_metric > 0 else 0
+        
+        if threshold_met:
+            print(f"✓ Optimization completed successfully - threshold met after {num_iterations} iteration(s)")
+        else:
+            print(f"Optimization completed after {num_iterations} iteration(s)")
+        
+        print(f"Final test {scorer}: {final_metric:.3f}")
+        print(f"Improvement over baseline: {improvement:+.1f}%")
+        print()
+        
+        # Table header
+        print("┌──────┬─────────────┬─────────────┬──────────────────┬──────────────────┐")
+        print("│ Loop │ Train Acc   │ Test Acc    │ Train Exp ID     │ Test Exp ID      │")
+        print("├──────┼─────────────┼─────────────┼──────────────────┼──────────────────┤")
+        
+        # Initial row
+        initial_train_id = optimization_results[0].get('train_experiment_id', '-') if optimization_results else '-'
+        initial_test_id = optimization_results[0].get('initial_test_experiment_id', '-') if optimization_results else '-'
+        print(f"│  {0:2d}  │      -      │   {initial_metric:.3f}     │        -         │ {self._truncate_id(initial_test_id):16s} │")
+        
+        # Results rows
+        for result in optimization_results:
+            loop_id = result.get('loop_id', 0)
+            train_metric = result.get('train_metric', 0)
+            test_metric = result.get('test_metric', 0)
+            train_exp_id = self._truncate_id(result.get('train_experiment_id', '-'))
+            test_exp_id = self._truncate_id(result.get('test_experiment_id', '-'))
+            
+            print(f"│  {loop_id:2d}  │   {train_metric:.3f}     │   {test_metric:.3f}     │ {train_exp_id:16s} │ {test_exp_id:16s} │")
+        
+        # Table footer
+        print("└──────┴─────────────┴─────────────┴──────────────────┴──────────────────┘")
+        print()
+        print(f"All prompt versions have been uploaded to Arize Prompt Hub: {prompt_name}")
+        print()
+    
+    def _truncate_id(self, exp_id: str, max_length: int = 16) -> str:
+        """Truncate experiment ID to fit in table cell"""
+        if exp_id == '-':
+            return '-'
+        if len(exp_id) <= max_length:
+            return exp_id
+        return exp_id[:max_length-3] + '...'
+    
+    def _add_prompt_version(
+        self,
+        prompt_hub_client,
+        system_prompt: str,
+        prompt_name: str,
+        model_name: str,
+        test_metric: float,
+        loop_number: int
+    ) -> Optional[str]:
+        """
+        Upload prompt version to Arize Prompt Hub
+        
+        Returns:
+            Optional[str]: Prompt version ID if successful, None otherwise
+        """
+        try:
+            existing_prompt = prompt_hub_client.pull_prompt(prompt_name=prompt_name)
+            existing_prompt.messages = [{"role": "system", "content": system_prompt}]
+            existing_prompt.commit_message = f"Loop {loop_number} - Test Metric: {test_metric:.3f}"
+            prompt_hub_client.push_prompt(existing_prompt, commit_message=existing_prompt.commit_message)
+            return f"{prompt_name}_v{loop_number}"
+        except Exception:
+            new_prompt = Prompt(
+                name=prompt_name,
+                model_name=model_name,
+                messages=[{"role": "system", "content": system_prompt}],
+                provider=LLMProvider.OPENAI,
+            )
+            new_prompt.commit_message = f"Loop {loop_number}\nTest Metric: {test_metric:.3f}"
+            prompt_hub_client.push_prompt(new_prompt, commit_message=new_prompt.commit_message)
+            return f"{prompt_name}_v{loop_number}"
 
     def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, Sequence]:
         """Create optimized prompt in the same format as input"""
