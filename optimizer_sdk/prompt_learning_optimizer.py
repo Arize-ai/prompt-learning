@@ -5,6 +5,8 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 import pandas as pd
 from phoenix.client.types import PromptVersion
 from phoenix.evals.models import OpenAIModel
+from openai import APITimeoutError, APIError
+from pyarrow._flight import FlightUnauthorizedError, FlightError
 
 from .meta_prompt import MetaPrompt
 from .tiktoken_splitter import TiktokenSplitter
@@ -84,6 +86,112 @@ class PromptLearningOptimizer:
         # Initialize components
         self.meta_prompter = MetaPrompt()
         self.optimization_history = []
+
+    def _call_llm_with_retry(
+        self,
+        model: OpenAIModel,
+        prompt_content: str,
+        max_retries: int = 5,
+        initial_delay: float = 1.0,
+        backoff_factor: float = 3.0,
+    ) -> str:
+        """
+        Call LLM with exponential backoff retry logic.
+        
+        Args:
+            model: OpenAIModel instance to call
+            prompt_content: Prompt content to send
+            max_retries: Maximum number of retry attempts (default: 5)
+            initial_delay: Initial delay in seconds before first retry (default: 1.0)
+            backoff_factor: Multiplier for delay after each retry (default: 3.0)
+            
+        Returns:
+            str: Model response
+            
+        Raises:
+            Exception: Re-raises the last exception if all retries fail
+        """
+        delay = initial_delay
+        
+        for attempt in range(max_retries + 1):  # +1 for the initial attempt
+            try:
+                response = model(prompt_content)
+                return response
+            except (APITimeoutError, APIError) as e:
+                if attempt == max_retries:
+                    # Last attempt failed, raise with clear message
+                    print(f"❌ API call failed after {max_retries} retries")
+                    raise Exception(f"API call failed after {max_retries} retries. Last error: {e}") from e
+                
+                # Calculate next delay
+                next_delay = delay * backoff_factor if attempt > 0 else delay
+                
+                # Print retry information
+                print(f"⚠️  API call failed (attempt {attempt + 1}/{max_retries + 1}): {type(e).__name__}: {str(e)}")
+                print(f"   Retrying in {next_delay:.0f}s...")
+                
+                # Wait before retrying
+                time.sleep(next_delay)
+                delay = next_delay
+            except Exception as e:
+                # For other exceptions, fail immediately
+                print(f"❌ Unexpected error during API call: {type(e).__name__}: {str(e)}")
+                raise
+
+    def _call_arize_with_retry(
+        self,
+        operation_callable: Callable,
+        operation_name: str,
+        *args,
+        max_retries: int = 3,
+        initial_delay: float = 2.0,
+        backoff_factor: float = 2.0,
+        **kwargs
+    ):
+        """
+        Call Arize client operations with exponential backoff retry logic.
+        
+        Args:
+            operation_callable: The Arize operation to call (e.g., arize_client.run_experiment)
+            operation_name: Name of the operation for logging purposes
+            *args: Positional arguments to pass to the operation
+            max_retries: Maximum number of retry attempts (default: 3, keyword-only)
+            initial_delay: Initial delay in seconds before first retry (default: 2.0, keyword-only)
+            backoff_factor: Multiplier for delay after each retry (default: 2.0, keyword-only)
+            **kwargs: Keyword arguments to pass to the operation
+            
+        Returns:
+            Result from the Arize operation
+            
+        Raises:
+            Exception: Re-raises the last exception if all retries fail
+        """
+        delay = initial_delay
+        
+        for attempt in range(max_retries + 1):  # +1 for the initial attempt
+            try:
+                result = operation_callable(*args, **kwargs)
+                return result
+            except (FlightUnauthorizedError, FlightError, RuntimeError, ConnectionError) as e:
+                if attempt == max_retries:
+                    # Last attempt failed, raise with clear message
+                    print(f"❌ {operation_name} failed after {max_retries} retries")
+                    raise Exception(f"{operation_name} failed after {max_retries} retries. Last error: {e}") from e
+                
+                # Calculate next delay
+                next_delay = delay * backoff_factor if attempt > 0 else delay
+                
+                # Print retry information
+                print(f"⚠️  {operation_name} failed (attempt {attempt + 1}/{max_retries + 1}): {type(e).__name__}: {str(e)}")
+                print(f"   Retrying in {next_delay:.0f}s...")
+                
+                # Wait before retrying
+                time.sleep(next_delay)
+                delay = next_delay
+            except Exception as e:
+                # For other exceptions, fail immediately
+                print(f"❌ Unexpected error during {operation_name}: {type(e).__name__}: {str(e)}")
+                raise
 
     def _load_dataset(self, dataset: Union[pd.DataFrame, str]) -> pd.DataFrame:
         """Load dataset from DataFrame or JSON file"""
@@ -285,7 +393,7 @@ class PromptLearningOptimizer:
                     api_key=self.openai_api_key.get_secret_value(),
                 )
 
-                response = model(meta_prompt_content)
+                response = self._call_llm_with_retry(model, meta_prompt_content)
 
                 if ruleset:
                     ruleset = response
@@ -374,7 +482,9 @@ class PromptLearningOptimizer:
         print(f"⏳ Running initial evaluation experiment...")
         task = task_fn(current_prompt_content)
         
-        initial_experiment_id, _ = arize_client.run_experiment(
+        initial_experiment_id, _ = self._call_arize_with_retry(
+            arize_client.run_experiment,
+            "Initial evaluation experiment",
             space_id=arize_space_id,
             dataset_id=test_dataset_id,
             task=task,
@@ -437,7 +547,9 @@ class PromptLearningOptimizer:
             # Run training experiment
             print(f"⏳ Running training experiment...")
             task = task_fn(current_prompt_content)
-            train_experiment_id, _ = arize_client.run_experiment(
+            train_experiment_id, _ = self._call_arize_with_retry(
+                arize_client.run_experiment,
+                f"Training experiment (loop {curr_loop})",
                 space_id=arize_space_id,
                 experiment_name=f"{experiment_name_prefix}_train_loop_{curr_loop}",
                 task=task,
@@ -492,7 +604,9 @@ class PromptLearningOptimizer:
             
             # Run test experiment
             print(f"⏳ Running test evaluation experiment...")
-            test_experiment_id, _ = arize_client.run_experiment(
+            test_experiment_id, _ = self._call_arize_with_retry(
+                arize_client.run_experiment,
+                f"Test evaluation experiment (loop {curr_loop})",
                 space_id=arize_space_id,
                 dataset_id=test_dataset_id,
                 task=task_fn(current_prompt_content),
@@ -577,7 +691,7 @@ class PromptLearningOptimizer:
             api_key=self.openai_api_key.get_secret_value(),
         )
         
-        response = model(meta_prompt_content)
+        response = self._call_llm_with_retry(model, meta_prompt_content)
         return response
     
     def _compute_metric(
@@ -590,7 +704,12 @@ class PromptLearningOptimizer:
         average: str = "macro"
     ) -> float:
         """Compute classification metric from an Arize experiment"""
-        experiment_df = arize_client.get_experiment(space_id, experiment_id=experiment_id)
+        experiment_df = self._call_arize_with_retry(
+            arize_client.get_experiment,
+            "Get experiment results",
+            space_id,
+            experiment_id=experiment_id
+        )
         
         y_pred = experiment_df[prediction_column_name]
         y_true = [1] * len(experiment_df)
@@ -617,7 +736,12 @@ class PromptLearningOptimizer:
         feedback_columns: List[str]
     ) -> pd.DataFrame:
         """Process experiment results and extract feedback into dataframe"""
-        experiment_df = arize_client.get_experiment(space_id, experiment_id=experiment_id)
+        experiment_df = self._call_arize_with_retry(
+            arize_client.get_experiment,
+            "Get experiment results for processing",
+            space_id,
+            experiment_id=experiment_id
+        )
         
         train_set_with_experiment_results = pd.merge(
             train_set, experiment_df, left_on='id', right_on='example_id', how='inner'
