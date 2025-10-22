@@ -667,6 +667,270 @@ class PromptLearningOptimizer:
         
         return self._create_optimized_prompt(current_prompt_content)
     
+    def optimize_with_experiments_batched(
+        self,
+        train_dataset: pd.DataFrame,
+        test_dataset: pd.DataFrame,
+        train_dataset_id: str,
+        test_dataset_id: str,
+        evaluators: List[Callable],
+        test_evaluator: Callable,
+        task_fn: Callable,
+        arize_client,
+        arize_space_id: str,
+        experiment_name_prefix: str,
+        prompt_hub_client,
+        prompt_name: str,
+        model_name: str,
+        feedback_columns: List[str],
+        annotations_prompt_path: str = None,
+        threshold: float = 1.0,
+        loops: int = 5,
+        scorer: str = "accuracy",
+        context_size_k: int = 90000,
+    ) -> Union[PromptVersion, Sequence, str]:
+        """
+        Optimize the prompt with batched processing that ensures all training examples are used.
+        
+        This method processes all training data in batches within each loop:
+        1. Shuffles training data at the start of each loop
+        2. Splits data into batches based on context window size
+        3. For each batch: run experiment → optimize → test → upload
+        4. Continues outer loops until threshold met or max loops reached
+        
+        Args:
+            train_dataset: Training dataset DataFrame
+            test_dataset: Test dataset DataFrame
+            train_dataset_id: Arize dataset ID for training data
+            test_dataset_id: Arize dataset ID for test data
+            evaluators: List of evaluators to run on training data (e.g., [output_evaluator])
+            test_evaluator: Evaluator to run on test data
+            task_fn: Function that takes system_prompt and returns an async task function
+            arize_client: ArizeDatasetsClient instance
+            arize_space_id: Arize space ID
+            experiment_name_prefix: Prefix for experiment names
+            prompt_hub_client: ArizePromptClient instance
+            prompt_name: Name for prompt in Arize Prompt Hub
+            model_name: Model name for the task
+            feedback_columns: List of feedback column names to extract
+            annotations_prompt_path: Path to annotations prompt file (optional, default: None)
+            threshold: Performance threshold to stop optimization (default: 1.0)
+            loops: Maximum number of optimization iterations (default: 5)
+            scorer: Metric to use for evaluation (default: "accuracy")
+            context_size_k: Context window size in tokens for batching (default: 90000)
+            
+        Returns:
+            Optimized prompt in the same format as the input prompt
+        """
+        print(f"🚀 Starting batched prompt optimization with {loops} outer loops (scorer: {scorer}, threshold: {threshold})")
+        
+        # Initialize optimization results tracking
+        optimization_results = []
+        
+        # Extract initial prompt content
+        initial_prompt_content = self._extract_prompt_content()
+        current_prompt_content = initial_prompt_content
+        
+        # Run initial evaluation on test set
+        print(f"\n📊 Initial evaluation:")
+        print(f"⏳ Running initial evaluation experiment...")
+        task = task_fn(current_prompt_content)
+        
+        initial_experiment_id, _ = self._call_arize_with_retry(
+            arize_client.run_experiment,
+            "Initial evaluation experiment",
+            space_id=arize_space_id,
+            dataset_id=test_dataset_id,
+            task=task,
+            evaluators=[test_evaluator],
+            experiment_name=f"{experiment_name_prefix}_initial",
+            concurrency=10
+        )
+        
+        print(f"⏳ Retrieving experiment results...")
+        time.sleep(3)
+        
+        initial_metric_value = self._compute_metric(
+            arize_client, arize_space_id, initial_experiment_id, 
+            "eval.test_evaluator.score", scorer
+        )
+        print(f"✅ Initial {scorer}: {initial_metric_value:.3f}")
+        
+        # Upload initial prompt to Prompt Hub
+        print(f"⏳ Uploading initial prompt version to Prompt Hub...")
+        prompt_version_id = self._add_prompt_version(
+            prompt_hub_client, current_prompt_content, prompt_name, 
+            model_name, initial_metric_value, 0
+        )
+        print(f"✅ Uploaded to Prompt Hub")
+        
+        if initial_metric_value >= threshold:
+            print("\n🎉 Initial prompt already meets threshold!")
+            return self._create_optimized_prompt(current_prompt_content)
+        
+        # Calculate batch size once
+        splitter = TiktokenSplitter(model=self.model_choice)
+        columns_to_count = list(train_dataset.columns)
+        max_rows = splitter.get_max_rows_for_context(train_dataset, columns_to_count, context_size_k)
+        print(f"🔧 Calculated max rows for context: {max_rows} rows fit within {context_size_k:,} tokens")
+        print(f"🔢 Will process {len(train_dataset)} training examples in batches of ~{max_rows} rows")
+        
+        # Main optimization loop
+        curr_loop = 1
+        train_df = train_dataset.copy()
+        threshold_met = False
+        batch_counter = 0  # Global counter for unique batch IDs
+        
+        while loops > 0:
+            print(f"\n{'='*80}")
+            print(f"📊 Loop {curr_loop}: Processing all training data in batches...")
+            print(f"{'='*80}")
+            
+            # Shuffle training data at the start of each loop
+            train_df_shuffled = train_df.sample(frac=1).reset_index(drop=True)
+            
+            # Split into batches
+            num_batches = (len(train_df_shuffled) + max_rows - 1) // max_rows  # Ceiling division
+            print(f"   🔀 Shuffled {len(train_df_shuffled)} examples into {num_batches} batches")
+            
+            # Process each batch
+            for batch_idx in range(num_batches):
+                batch_counter += 1
+                start_idx = batch_idx * max_rows
+                end_idx = min(start_idx + max_rows, len(train_df_shuffled))
+                batch_df = train_df_shuffled.iloc[start_idx:end_idx].reset_index(drop=True)
+                
+                print(f"\n   📦 Batch {batch_idx + 1}/{num_batches} (rows {start_idx}-{end_idx-1}, {len(batch_df)} examples)")
+                
+                # Run training experiment on this batch
+                print(f"   ⏳ Running training experiment...")
+                task = task_fn(current_prompt_content)
+                train_experiment_id, _ = self._call_arize_with_retry(
+                    arize_client.run_experiment,
+                    f"Training experiment (loop {curr_loop}, batch {batch_idx + 1})",
+                    space_id=arize_space_id,
+                    experiment_name=f"{experiment_name_prefix}_train_L{curr_loop}_B{batch_idx + 1}",
+                    task=task,
+                    dataset_df=batch_df,
+                    dataset_id=train_dataset_id,
+                    evaluators=evaluators + [test_evaluator],
+                    concurrency=10
+                )
+                
+                print(f"   ⏳ Retrieving training experiment results...")
+                time.sleep(3)
+                
+                # Compute training metric
+                train_metric = self._compute_metric(
+                    arize_client, arize_space_id, train_experiment_id,
+                    "eval.output_evaluator.score", "accuracy"
+                )
+                print(f"   ✅ Training {scorer}: {train_metric:.3f}")
+                
+                # Process experiment results to get feedback
+                print(f"   ⏳ Processing experiment results and extracting feedback...")
+                batch_df_with_feedback = self._process_experiment(
+                    arize_client, arize_space_id, train_experiment_id,
+                    batch_df, "query", "output", feedback_columns
+                )
+                
+                # Detect template variables
+                self.template_variables = self._detect_template_variables(current_prompt_content)
+                
+                # Create annotations if path is provided
+                annotations_list = []
+                if annotations_prompt_path is not None:
+                    with open(annotations_prompt_path, "r") as file:
+                        annotations_prompt = file.read()
+                    
+                    annotator = Annotator(annotations_prompt)
+                    annotation = annotator.generate_annotation(
+                        annotator.construct_content(
+                            batch_df_with_feedback, current_prompt_content,
+                            self.template_variables, feedback_columns, "output", "ground_truth"
+                        )
+                    )
+                    annotations_list = [annotation]
+                
+                # Optimize the prompt
+                print(f"   ⏳ Optimizing prompt with meta-prompt...")
+                current_prompt_content = self._optimize_single_batch(
+                    batch_df_with_feedback, "output", feedback_columns, annotations_list, current_prompt_content
+                )
+                print(f"   ✅ Prompt optimization complete")
+                
+                # Run test experiment
+                print(f"   ⏳ Running test evaluation experiment...")
+                test_experiment_id, _ = self._call_arize_with_retry(
+                    arize_client.run_experiment,
+                    f"Test evaluation experiment (loop {curr_loop}, batch {batch_idx + 1})",
+                    space_id=arize_space_id,
+                    dataset_id=test_dataset_id,
+                    task=task_fn(current_prompt_content),
+                    evaluators=[test_evaluator],
+                    experiment_name=f"{experiment_name_prefix}_test_L{curr_loop}_B{batch_idx + 1}",
+                    concurrency=10
+                )
+                
+                print(f"   ⏳ Retrieving test experiment results...")
+                time.sleep(3)
+                
+                # Compute test metric
+                test_metric = self._compute_metric(
+                    arize_client, arize_space_id, test_experiment_id,
+                    "eval.test_evaluator.score", scorer
+                )
+                print(f"   ✅ Test {scorer}: {test_metric:.3f}")
+                
+                # Upload prompt version to Prompt Hub
+                print(f"   ⏳ Uploading prompt version to Prompt Hub...")
+                prompt_version_id = self._add_prompt_version(
+                    prompt_hub_client, current_prompt_content, prompt_name,
+                    model_name, test_metric, batch_counter
+                )
+                print(f"   ✅ Uploaded to Prompt Hub")
+                
+                # Track results for this batch
+                loop_result = {
+                    'loop_id': curr_loop,
+                    'batch_id': batch_idx + 1,
+                    'total_batches': num_batches,
+                    'batch_size': len(batch_df),
+                    'train_experiment_id': train_experiment_id,
+                    'test_experiment_id': test_experiment_id,
+                    'train_metric': train_metric,
+                    'test_metric': test_metric,
+                    'prompt_version_id': prompt_version_id,
+                    'initial_test_experiment_id': initial_experiment_id if curr_loop == 1 and batch_idx == 0 else None
+                }
+                optimization_results.append(loop_result)
+                
+                # Check if threshold met
+                if test_metric >= threshold:
+                    print(f"\n🎉 Prompt optimization met threshold after batch {batch_idx + 1}!")
+                    threshold_met = True
+                    break
+            
+            # Break outer loop if threshold was met
+            if threshold_met:
+                break
+            
+            loops -= 1
+            curr_loop += 1
+        
+        # Display optimization summary
+        final_metric = optimization_results[-1]['test_metric'] if optimization_results else initial_metric_value
+        self._print_batched_optimization_summary(
+            optimization_results=optimization_results,
+            initial_metric=initial_metric_value,
+            final_metric=final_metric,
+            scorer=scorer,
+            prompt_name=prompt_name,
+            threshold_met=threshold_met
+        )
+        
+        return self._create_optimized_prompt(current_prompt_content)
+    
     def _optimize_single_batch(
         self,
         dataset: pd.DataFrame,
@@ -839,6 +1103,76 @@ class PromptLearningOptimizer:
         if len(exp_id) <= max_length:
             return exp_id
         return exp_id[:max_length-3] + '...'
+    
+    def _print_batched_optimization_summary(
+        self,
+        optimization_results: List[Dict],
+        initial_metric: float,
+        final_metric: float,
+        scorer: str,
+        prompt_name: str,
+        threshold_met: bool = False
+    ):
+        """
+        Display a professional summary of the batched optimization results.
+        Shows each batch as a separate row with loop and batch information.
+        
+        Args:
+            optimization_results: List of dictionaries containing batch results
+            initial_metric: Initial test metric value
+            final_metric: Final test metric value
+            scorer: Name of the metric used
+            prompt_name: Name of the prompt in Prompt Hub
+            threshold_met: Whether the threshold was met
+        """
+        print("\n")
+        print("╔════════════════════════════════════════════════════════════════════════════════╗")
+        print("║                  BATCHED PROMPT OPTIMIZATION SUMMARY                           ║")
+        print("╚════════════════════════════════════════════════════════════════════════════════╝")
+        print()
+        
+        # Summary statistics
+        num_batches_processed = len(optimization_results)
+        improvement = ((final_metric - initial_metric) / initial_metric * 100) if initial_metric > 0 else 0
+        
+        if threshold_met:
+            print(f"✓ Optimization completed successfully - threshold met after {num_batches_processed} batch(es)")
+        else:
+            print(f"Optimization completed after {num_batches_processed} batch(es)")
+        
+        print(f"Final test {scorer}: {final_metric:.3f}")
+        print(f"Improvement over baseline: {improvement:+.1f}%")
+        print()
+        
+        # Table header
+        print("┌──────┬─────────┬─────────────┬─────────────┬──────────────────┬──────────────────┐")
+        print("│ Loop │ Batch   │ Train Acc   │ Test Acc    │ Train Exp ID     │ Test Exp ID      │")
+        print("├──────┼─────────┼─────────────┼─────────────┼──────────────────┼──────────────────┤")
+        
+        # Initial row
+        initial_test_id = optimization_results[0].get('initial_test_experiment_id', '-') if optimization_results else '-'
+        print(f"│  {0:2d}  │    -    │      -      │   {initial_metric:.3f}     │        -         │ {self._truncate_id(initial_test_id):16s} │")
+        
+        # Results rows - show each batch
+        for result in optimization_results:
+            loop_id = result.get('loop_id', 0)
+            batch_id = result.get('batch_id', 0)
+            total_batches = result.get('total_batches', 0)
+            train_metric = result.get('train_metric', 0)
+            test_metric = result.get('test_metric', 0)
+            train_exp_id = self._truncate_id(result.get('train_experiment_id', '-'))
+            test_exp_id = self._truncate_id(result.get('test_experiment_id', '-'))
+            
+            # Format batch as "1/5", "2/5", etc.
+            batch_str = f"{batch_id}/{total_batches}"
+            
+            print(f"│  {loop_id:2d}  │  {batch_str:5s}  │   {train_metric:.3f}     │   {test_metric:.3f}     │ {train_exp_id:16s} │ {test_exp_id:16s} │")
+        
+        # Table footer
+        print("└──────┴─────────┴─────────────┴─────────────┴──────────────────┴──────────────────┘")
+        print()
+        print(f"All prompt versions have been uploaded to Arize Prompt Hub: {prompt_name}")
+        print()
     
     def _add_prompt_version(
         self,
