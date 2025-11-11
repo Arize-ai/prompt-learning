@@ -1,0 +1,4 @@
+train_accuracy: 0.4 
+test_accuracy: 0.4 
+optimized ruleset_0: 
+ No rules 
