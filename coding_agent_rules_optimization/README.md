@@ -11,22 +11,20 @@ This folder contains a lightweight harness to run Cline (in PLAN/ACT modes) agai
 ---
 
 ### Prerequisites
-- Node.js 20.x and npm
-  - If you have Node 22, the launcher shims to use Node 20; ensure Node 20 is installed (e.g., via nvm)
+- Node.js 
 - npx + tsx available (`npx tsx`)
 - grpcurl on PATH (macOS: `brew install grpcurl`)
 - ripgrep on PATH (macOS: `brew install ripgrep`) and symlinked for Cline core:
   - From the Cline repo root: `ln -sf "$(command -v rg)" dist-standalone/rg`
 - Python 3.10+ environment with:
   - `pip install swebench pandas datasets`
-  - set `OPENAI_API_KEY` for optimizer_sdk
-  - set `ANTHROPIC_API_KEY` for cline
+  - set `OPENAI_API_KEY` for optimizer_sdk and Cline
 
 ---
 
 ### Important Note on Cost and Scale
 
-**Warning**: Running Cline on multiple rows of SWE-bench is very expensive, as each Cline call utilizes multiple Claude API calls. It is strongly recommended to drastically reduce the number of rows in both the training and test sets from 150 to a much smaller number to manage costs effectively.
+**Warning**: Running Cline on multiple rows of SWE-bench is very expensive, as each Cline call utilizes multiple LLM API calls. It is strongly recommended to drastically reduce the number of rows in both the training and test sets from 150 to a much smaller number to manage costs effectively.
 
 ---
 

@@ -10,14 +10,14 @@ from .meta_prompt import MetaPrompt
 from .tiktoken_splitter import TiktokenSplitter
 from .utils import get_key_value
 from .annotator import Annotator
-
+from openai import OpenAI
 
 class PromptLearningOptimizer:
     """
     PromptLearningOptimizer is a class that optimizes a prompt using the meta-prompt approach.
 
     Args:
-        prompt: Either a PromptVersion object or list of messages or a string representing the user prompt
+        prompt: Either a PromptVersion object or a string representing the user prompt
         model_choice: OpenAI model to use for optimization - currently only supports OpenAI models (default: "gpt-4")
         openai_api_key: OpenAI API key for optimization. Can also be set via OPENAI_API_KEY environment variable.
 
@@ -37,6 +37,8 @@ class PromptLearningOptimizer:
                 feedback_columns: List of column names containing existing feedback from the dataset (required if not using new evaluations)
                 context_size_k: Context window size in thousands of tokens (default: 8k)
                 evaluate: Whether to run evaluators on the dataset (default: True)
+                meta_prompt: Meta-prompt to use for optimization (default: our default meta-prompt)
+                rules_meta_prompt: Meta-prompt to use for optimization with ruleset (default: our default meta-prompt for ruleset)
             Returns:
                 optimized_prompt: Optimized prompt object
 
@@ -73,14 +75,21 @@ class PromptLearningOptimizer:
         prompt: Union[PromptVersion, str, List[Dict[str, str]]],
         model_choice: str = "gpt-4",
         openai_api_key: Optional[str] = None,
+        meta_prompt: Optional[str] = None,
+        rules_meta_prompt: Optional[str] = None,
     ):
         self.prompt = prompt
         self.model_choice = model_choice
         self.openai_api_key = get_key_value("OPENAI_API_KEY", openai_api_key)
 
         # Initialize components
-        self.meta_prompter = MetaPrompt()
-        self.optimization_history = []
+        # Only pass arguments if they're not None to allow MetaPrompt defaults to be used
+        meta_prompt_kwargs = {}
+        if meta_prompt is not None:
+            meta_prompt_kwargs['meta_prompt'] = meta_prompt
+        if rules_meta_prompt is not None:
+            meta_prompt_kwargs['rules_meta_prompt'] = rules_meta_prompt
+        self.meta_prompter = MetaPrompt(**meta_prompt_kwargs)
 
     def _load_dataset(self, dataset: Union[pd.DataFrame, str]) -> pd.DataFrame:
         """Load dataset from DataFrame or JSON file"""
@@ -119,38 +128,28 @@ class PromptLearningOptimizer:
         if missing_columns:
             raise ValueError(f"Dataset missing required columns: {missing_columns}")
 
-    def _extract_prompt_messages(
-        self,
-    ) -> Sequence:
-        """Extract messages from prompt object or list"""
+    def _extract_system_prompt(self) -> str:
+        """Extract system prompt from prompt object or list"""
         if isinstance(self.prompt, PromptVersion):
             # Extract messages from PromptVersion template
             template = self.prompt._template
             if template["type"] == "chat":
-                return template["messages"]
+                messages = template["messages"] # type: ignore
             else:
                 raise ValueError("Only chat templates are supported")
+            for message in messages:
+                if message["role"] == "system":
+                    return message["content"] # type: ignore
+            raise ValueError("No system prompt found in the prompt")
         elif isinstance(self.prompt, list):
+            for message in self.prompt: # type: ignore
+                if message["role"] == "system":
+                    return message["content"] # type: ignore
+            raise ValueError("No system prompt found in the prompt")
+        elif isinstance(self.prompt, str):
             return self.prompt
-        elif isinstance(self.prompt, str):  # ADD FUNCTIONALITY FOR USER OR SYSTEM PROMPT
-            return [{"role": "user", "content": self.prompt}]
         else:
-            raise ValueError("Prompt must be either a PromptVersion object or list of messages")
-
-    def _extract_prompt_content(self) -> str:
-        """Extract the main prompt content from messages"""
-        messages = self._extract_prompt_messages()
-
-        # Look for system or developer message first
-        for message in messages:
-            if message.get("role") in ["user"]:
-                return message.get("content", "")
-
-        # Fall back to first message
-        if messages:
-            return messages[0].get("content", "")
-
-        raise ValueError("No valid prompt content found in messages. CURRENTLY ONLY CHECKING FOR USER PROMPT")
+            raise ValueError("Prompt must be either a PromptVersion object, list of messages, or string")
 
     def _detect_template_variables(self, prompt_content: str) -> list[str]:
         _TEMPLATE_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
@@ -193,7 +192,7 @@ class PromptLearningOptimizer:
         feedback_columns: List[str],
         annotator_prompts: List[str],
         output_column: str,
-        ground_truth_column: str = None,
+        ground_truth_column: Optional[str] = None,
     ) -> List[str]:
         """
         Create an annotation for the dataset using the annotator
@@ -219,10 +218,10 @@ class PromptLearningOptimizer:
         output_column: str,
         evaluators: List[Callable] = [],
         feedback_columns: List[str] = [],
-        annotations: List[str] = [],
+        annotations: List[str] | None = None,
         ruleset: str = "",
         context_size_k: int = 128000,
-    ) -> Union[PromptVersion, Sequence]:
+    ) -> Union[PromptVersion, Sequence, str]:
         """
         Optimize the prompt using the meta-prompt approach
 
@@ -237,13 +236,14 @@ class PromptLearningOptimizer:
             Optimized prompt in the same format as the input prompt
         """
         # Run evaluators if provided
+        
         dataset = self._load_dataset(dataset)
         self._validate_inputs(dataset, feedback_columns, evaluators, output_column, output_required=True)
         if evaluators:
             dataset, feedback_columns = self.run_evaluators(dataset, evaluators, feedback_columns)
-
+        
         # Extract prompt content
-        prompt_content = self._extract_prompt_content()
+        prompt_content = self._extract_system_prompt()
         # Auto-detect template variables
         self.template_variables = self._detect_template_variables(prompt_content)
 
@@ -267,7 +267,6 @@ class PromptLearningOptimizer:
         for i, batch in enumerate(batch_dataframes):
 
             try:
-
                 # Construct meta-prompt content
                 meta_prompt_content = self.meta_prompter.construct_content(
                     batch_df=batch,
@@ -279,17 +278,19 @@ class PromptLearningOptimizer:
                     ruleset=ruleset,
                 )
 
-                model = OpenAIModel(
+                openai_client = OpenAI(api_key=self.openai_api_key.get_secret_value())
+                output_response = openai_client.chat.completions.create(
                     model=self.model_choice,
-                    api_key=self.openai_api_key.get_secret_value(),
+                    messages=[{"role": "user", "content": meta_prompt_content}],
                 )
 
-                response = model(meta_prompt_content)
+                response = output_response.choices[0].message.content
+                response_text = response or ""
 
                 if ruleset:
-                    ruleset = response
+                    ruleset = response_text
                 else:
-                    potential_new_prompt = response
+                    potential_new_prompt = response_text
                     # Validate that new prompt has same template variables
                     print(f"   ✅ Batch {i + 1}/{len(batch_dataframes)}: Optimized")
                     optimized_prompt_content = potential_new_prompt
@@ -303,23 +304,18 @@ class PromptLearningOptimizer:
         optimized_prompt = self._create_optimized_prompt(optimized_prompt_content)
         return optimized_prompt
 
-    def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, Sequence]:
+    def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, Sequence, str]:
         """Create optimized prompt in the same format as input"""
 
         if isinstance(self.prompt, PromptVersion):
-            # Create new Prompt object with optimized content
-            original_messages = self._extract_prompt_messages()
+            original_messages = self.prompt._template["messages"]
             optimized_messages = copy.deepcopy(original_messages)
 
-            # Replace the main content (system or first message)
             for i, message in enumerate(optimized_messages):
-                if message.get("role") in ["user"]:  # ADD FUNCTIONALITY FOR SYSTEM PROMPT
+                if message["role"] == "system":
                     optimized_messages[i]["content"] = optimized_content
                     break
-            else:
-                print("No user prompt found in the original prompt")
 
-            # Create a new PromptVersion with optimized content
             return PromptVersion(
                 optimized_messages,
                 model_name=self.prompt._model_name,
@@ -328,17 +324,12 @@ class PromptLearningOptimizer:
             )
 
         elif isinstance(self.prompt, list):
-            # Return optimized messages list
-            original_messages = self._extract_prompt_messages()
-            optimized_messages = copy.deepcopy(original_messages)
+            optimized_messages = copy.deepcopy(self.prompt) # type: ignore
 
-            # Replace the main content
             for i, message in enumerate(optimized_messages):
-                if message.get("role") in ["user"]:  # ADD FUNCTIONALITY FOR SYSTEM PROMPT
+                if message["role"] == "system":
                     optimized_messages[i]["content"] = optimized_content
                     break
-            else:
-                print("No user prompt found in the original prompt")
 
             return optimized_messages
 

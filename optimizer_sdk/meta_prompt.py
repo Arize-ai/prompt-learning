@@ -6,8 +6,9 @@ from .constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM, CODING_AGEN
 
 
 class MetaPrompt:
-    meta_prompt_messages = META_PROMPT_TEMPLATE
-    coding_agent_meta_prompt_messages = CODING_AGENT_META_PROMPT_TEMPLATE
+    def __init__(self, meta_prompt: str = META_PROMPT_TEMPLATE, rules_meta_prompt: str = CODING_AGENT_META_PROMPT_TEMPLATE):
+        self.meta_prompt = meta_prompt
+        self.rules_meta_prompt = rules_meta_prompt
     def construct_content(
         self,
         batch_df: pd.DataFrame,
@@ -15,14 +16,14 @@ class MetaPrompt:
         template_variables: List[str],
         feedback_columns: List[str],
         output_column: str,
-        annotations: List[str] = [],
-        ruleset: str = "",
+        annotations: List[str] | None = None,
+        ruleset: str | None = None,
     ) -> str:
-        if ruleset != "":
-            content = self.coding_agent_meta_prompt_messages
+        if ruleset is not None:
+            content = self.rules_meta_prompt
             content = content.replace("{ruleset}", ruleset)
         else:
-            content = self.meta_prompt_messages
+            content = self.meta_prompt
         content = content.replace("{baseline_prompt}", prompt_to_optimize_content)
         examples = ""
         # iterate over the batch of data and populate the template with the actual values from the dataframe
@@ -35,15 +36,22 @@ class MetaPrompt:
                 output_value = output_value.replace(START_DELIM, " ").replace(END_DELIM, " ")
             else:
                 output_value = "None"
-            current_example = f"""\n
-                Example {str(ind)}
+            if ruleset is None:
+                current_example = f"""\n
+                    Example {str(ind)}
 
-                Data for baseline prompt: {[row_dict[temp_var] for temp_var in template_variables]}
+                    Data for baseline prompt: {[row_dict[temp_var] for temp_var in template_variables]}
 
-                Output from the LLM using the template above: {output_value}
+                    LLM Output using baseline prompt: {output_value}
 
-                Feedback from the evaluator using the template above and the output above:
-            """
+                    Output level feedback:
+                """
+            else:
+                current_example = f"""\n
+                    Example {str(ind)}
+
+                    coding agent patch: {output_value}
+                """
 
             for feedback_column in feedback_columns:
                 feedback_value = row_dict[feedback_column]
@@ -56,8 +64,11 @@ class MetaPrompt:
                 current_example += f"\n{feedback_column}: {feedback_value}"
             examples += current_example
         content = content.replace("{examples}", examples)
+
         if annotations:
             content = content.replace("{annotations}", "\n".join(annotations))
+        with open("metaprompt.txt", "w") as f:
+            f.write(content)
         return content
 
     def format_template_with_vars(

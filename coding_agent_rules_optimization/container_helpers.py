@@ -83,16 +83,15 @@ def export_patch_from_workspace(
     instance_id: str,
     workspace: Path,
     out_predictions_path: Path | None = None,
+    model_name_or_path: str = "cline",
 ) -> Path:
     """Create a unified diff between a pristine copy from the image and the current workspace.
 
     Returns path to a predictions JSONL file suitable for run_evaluation.
     """
-    print(f"[DEBUG] export_patch: ws={workspace}")
     # Prefer a repo-relative diff from inside the workspace so paths apply cleanly in the harness
     # Stage all tracked/new files (respects .gitignore), diff against HEAD, then unstage.
     try:
-        print("[DEBUG] staging changes for diff (excluding sqlite/db artifacts)")
         stage_cmd = " ".join([
             f"git -C {shlex.quote(str(workspace))} -c core.fileMode=false add -A -- .",
             "\":(exclude)**/*.sqlite3\"",
@@ -103,9 +102,7 @@ def export_patch_from_workspace(
         # Extra debugging of staged/unstaged state prior to diff
         try:
             staged = sh(f"git -C {shlex.quote(str(workspace))} diff --cached --name-only")
-            print(f"[DEBUG] staged files:\n{staged}")
             unstaged = sh(f"git -C {shlex.quote(str(workspace))} diff --name-only")
-            print(f"[DEBUG] unstaged files:\n{unstaged}")
         except Exception as e:
             print(f"[DEBUG] git state inspection failed: {e}")
         # Use pathspec excludes to avoid non-source artifacts
@@ -147,7 +144,7 @@ def export_patch_from_workspace(
     # patch_text is already filtered via pathspec excludes above
     pred = {
         "instance_id": instance_id,
-        "model_name_or_path": "cline",
+        "model_name_or_path": model_name_or_path,
         "model_patch": patch_text,
     }
     out_predictions_path = out_predictions_path or Path(tempfile.mkstemp(prefix="preds_", suffix=".jsonl")[1])
