@@ -219,7 +219,7 @@ class PromptLearningOptimizer:
         evaluators: List[Callable] = [],
         feedback_columns: List[str] = [],
         annotations: List[str] | None = None,
-        ruleset: str = "",
+        ruleset: str | None = None,
         context_size_k: int = 128000,
     ) -> Union[PromptVersion, Sequence, str]:
         """
