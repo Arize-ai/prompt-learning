@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://verbalized-sampling.app/schemas/v1/verbalize-request.json",
+  "title": "Verbalize Request",
+  "description": "Request schema for verbalized sampling distribution generation",
+  "type": "object",
+  "required": [
+    "prompt",
+    "k",
+    "model",
+    "provider"
+  ],
+  "properties": {
+    "prompt": {
+      "type": "string",
+      "description": "Input text prompt for LLM completion generation",
+      "minLength": 1,
+      "maxLength": 100000
+    },
+    "k": {
+      "type": "integer",
+      "description": "Number of completions to generate (≤100 for API, ≤500 for local)",
+      "minimum": 1,
+      "maximum": 500
+    },
+    "tau": {
+      "type": "number",
+      "description": "Temperature scaling parameter (optional, defaults to 1.0)",
+      "minimum": 0.0,
+      "maximum": 10.0,
+      "default": 1.0
+    },
+    "temperature": {
+      "type": "number",
+      "description": "Sampling temperature (optional, defaults to 0.8)",
+      "minimum": 0.0,
+      "maximum": 2.0,
+      "default": 0.8
+    },
+    "seed": {
+      "type": ["integer", "null"],
+      "description": "Random seed for deterministic sampling (null = random)",
+      "minimum": 0
+    },
+    "model": {
+      "type": "string",
+      "description": "Model identifier (e.g., 'gpt-4', 'claude-3-opus', 'llama-3-70b')",
+      "minLength": 1
+    },
+    "provider": {
+      "type": "string",
+      "description": "Provider identifier: 'openai', 'anthropic', 'cohere', 'local_vllm'",
+      "enum": ["openai", "anthropic", "cohere", "local_vllm"]
+    },
+    "include_token_probabilities": {
+      "type": "boolean",
+      "description": "Include token-level probabilities in response (optional)",
+      "default": false
+    }
+  }
+}

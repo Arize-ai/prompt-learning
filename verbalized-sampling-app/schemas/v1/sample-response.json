@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://verbalized-sampling.app/schemas/v1/sample-response.json",
+  "title": "Sample Response",
+  "description": "Response schema for weighted sampling result",
+  "type": "object",
+  "required": [
+    "selected_completion",
+    "selection_index"
+  ],
+  "properties": {
+    "selected_completion": {
+      "type": "string",
+      "description": "Text of the sampled completion"
+    },
+    "selection_index": {
+      "type": "integer",
+      "description": "Index of selected completion in original distribution (0-based)",
+      "minimum": 0
+    },
+    "probability": {
+      "type": "number",
+      "description": "Probability of the selected completion",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "seed_used": {
+      "type": ["integer", "null"],
+      "description": "Seed that was used for this sample"
+    }
+  }
+}
