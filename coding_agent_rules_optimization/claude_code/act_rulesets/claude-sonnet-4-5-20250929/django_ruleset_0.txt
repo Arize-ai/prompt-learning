@@ -1,0 +1,18 @@
+train_accuracy: 0.6470588235294118
+test_accuracy: 0.6086956521739131
+optimized ruleset_0:
+- Make the smallest, most localized change that addresses the issue; modify the correct layer/entry-point (method/class) where the behavior is defined rather than adding wrappers or unrelated helpers.
+- Mirror established patterns and conventions in the codebase (naming, logging style, repr/str formatting, id_for_label semantics, backend-specific overrides like as_sqlite()/as_oracle()) to maintain compatibility with existing tests and style.
+- When changing error messages, include required placeholders and pass params so messages render exactly as expected; do not rephrase messages or change punctuation/quoting styles used across the codebase.
+- Do not add demonstration scripts, debug files, or extraneous modules; only modify production code and, when appropriate, existing tests relevant to the change.
+- Respect immutability and hashing semantics: if implementing __eq__, ensure __hash__ behavior matches project expectations (e.g., implement a stable hash or refrain from making instances unhashable when the project expects hashability).
+- Prefer reusing existing helpers/utilities (e.g., HasKey, get_email_field_name(), deconstruct()) instead of reimplementing logic; use deconstruct()/reconstruct patterns to avoid copying unpickleable objects.
+- Preserve expected None/empty semantics: return None (not an empty string) to indicate the absence of an ID for labels or similar APIs; read IDs from attrs when the widget supplies them.
+- For exec/evaluation contexts, provide the appropriate globals() (not an empty dict) to allow access to imports and module globals while executing dynamic code.
+- When handling Q/combinator logic, support combining with other conditional expressions by checking the conditional attribute; when cloning/copying Q nodes, use deconstruct() to avoid pickling issues and normalize non-pickleable dict views (keys/values/items) to lists.
+- For database/backend-specific behavior, use the correct backend hooks and SQL helpers; ensure lookups distinguish between missing keys and explicit nulls, following existing backend primitives (e.g., JSON_TYPE on SQLite, JSON_EXISTS on Oracle).
+- When reordering operations (e.g., migrations), prefer adjusting generation order rather than bolting on complex dependencies unless the framework already supports that dependency pattern.
+- Validate and normalize inputs early (e.g., strip trailing path separators before os.path.basename, compute top_dir before validation) so downstream logic receives canonical values.
+- Ensure subclass/instance checks for metaclasses honor inheritance of known subclasses (e.g., issubclass against the tuple of supported subclasses) so custom subclasses pass DEFAULT_AUTO_FIELD checks.
+- Keep repr/str outputs aligned with existing formatting (correct quoting and route/url_name formatting); when wrapping functions (e.g., functools.partial), display informative output (repr(self.func)) while preserving self.func unchanged.
+- Avoid broad behavior changes that alter public APIs or cached behavior beyond the scope of the fix; keep diffs minimal and targeted to the reported issue.

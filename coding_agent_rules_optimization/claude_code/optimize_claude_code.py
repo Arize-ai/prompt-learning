@@ -32,7 +32,7 @@ WORKERS = 50
 HOSTNAME = os.getenv("PHOENIX_HOSTNAME")
 
 
-def load_and_split_dataset():
+def load_split_swebench():
     """Load SWE-bench Lite and split by repository."""
     print("Loading SWE-bench Lite dataset...")
     dataset_name = "SWE-bench/SWE-bench_Lite"
@@ -90,6 +90,42 @@ def load_and_split_dataset():
     return dataset_name, train_ids, test_ids, train_pd, test_pd
 
 
+def load_split_swebench_repo(repo, train_percentage=0.5):
+    """Load SWE-bench Lite and split by date for a specific repo."""
+    from datetime import datetime
+    
+    print(f"Loading SWE-bench Lite dataset for repo: {repo}...")
+    dataset_name = "SWE-bench/SWE-bench_Lite"
+    dataset = load_swebench_dataset(dataset_name, "test")
+    
+    # Filter by repo
+    repo_examples = [inst for inst in dataset if inst['repo'] == repo]
+    print(f"Found {len(repo_examples)} instances for {repo}")
+    
+    # Sort by created_at date (earliest first)
+    repo_examples.sort(key=lambda x: datetime.fromisoformat(x['created_at'].replace('Z', '+00:00')))
+    
+    # Split by train_percentage
+    train_size = int(len(repo_examples) * train_percentage)
+    train_dataset = repo_examples[:train_size]
+    test_dataset = repo_examples[train_size:]
+    
+    # Extract IDs
+    train_ids = [inst["instance_id"] for inst in train_dataset]
+    test_ids = [inst["instance_id"] for inst in test_dataset]
+    
+    # Create DataFrames
+    train_pd = pd.DataFrame(train_dataset)
+    test_pd = pd.DataFrame(test_dataset)
+    
+    print(f"\nDataset split:")
+    print(f"  Train: {len(train_dataset)} instances ({len(train_dataset)/len(repo_examples)*100:.1f}%)")
+    print(f"  Test: {len(test_dataset)} instances ({len(test_dataset)/len(repo_examples)*100:.1f}%)")
+    
+    return dataset_name, train_ids, test_ids, train_pd, test_pd
+
+
+
 def cleanup_docker():
     """Clean up Docker resources to free space."""
     print("  Cleaning up Docker resources...")
@@ -121,7 +157,7 @@ def cleanup_docker():
     print("  ✓ Docker cleanup complete")
 
 
-def setup_phoenix(train_pd, test_pd, model_name):
+def setup_phoenix(train_pd, test_pd, train_name, test_name, model_name):
     """Upload datasets to Phoenix."""
     print("\nUploading datasets to Phoenix...")
     from phoenix.client import Client
@@ -129,7 +165,7 @@ def setup_phoenix(train_pd, test_pd, model_name):
     phoenix_client = Client(base_url=HOSTNAME, api_key=os.getenv("PHOENIX_API_KEY"))
     
     train_dataset = phoenix_client.datasets.create_dataset(
-        name=f"Claude Code: SWE-bench Train ({TRAIN_SIZE}) {model_name}",
+        name=f"{train_name} {len(train_pd)} {model_name}",
         dataset_description="Claude Code: SWE-bench Train",
         dataframe=train_pd,
         input_keys=['problem_statement'],
@@ -138,7 +174,7 @@ def setup_phoenix(train_pd, test_pd, model_name):
     )
     
     test_dataset = phoenix_client.datasets.create_dataset(
-        name=f"Claude Code: SWE-bench Test ({TEST_SIZE}) {model_name}",
+        name=f"{test_name} {len(test_pd)} {model_name}",
         dataset_description="Claude Code: SWE-bench Test",
         dataframe=test_pd,
         input_keys=['problem_statement'],
@@ -152,7 +188,7 @@ def setup_phoenix(train_pd, test_pd, model_name):
     return train_dataset, test_dataset
 
 
-def run_optimization_loop(dataset_name, train_ids, test_ids, train_dataset_obj, ruleset, model_name="claude-sonnet-4-5"):
+def run_optimization_loop(dataset_name, train_ids, test_ids, train_dataset_obj, ruleset, repo,model_name="claude-sonnet-4-5"):
     """Run the optimization loop."""
     # Create output directories
     Path("claude_code_results").mkdir(exist_ok=True)
@@ -163,8 +199,8 @@ def run_optimization_loop(dataset_name, train_ids, test_ids, train_dataset_obj, 
         print(f"LOOP {loop}")
         print("="*80)
         
-        train_run_id = f"train_{loop}_{model_name}"
-        test_run_id = f"test_{loop}_{model_name}"
+        train_run_id = f"{repo}_train_{loop}_{model_name}"
+        test_run_id = f"{repo}_test_{loop}_{model_name}"
         
         # Run on train set
         print(f"\nRunning Claude Code on train set ({len(train_ids)} instances)...")
@@ -179,7 +215,7 @@ def run_optimization_loop(dataset_name, train_ids, test_ids, train_dataset_obj, 
         )
         cleanup_docker()
 
-        train_df.to_csv(f"claude_code_results/{model_name}/train_results_{loop}.csv", index=False)
+        train_df.to_csv(f"claude_code_results/{model_name}/{repo}_train_results_{loop}.csv", index=False)
         
         # Run on test set
         print(f"\nRunning Claude Code on test set ({len(test_ids)} instances)...")
@@ -195,7 +231,7 @@ def run_optimization_loop(dataset_name, train_ids, test_ids, train_dataset_obj, 
         cleanup_docker()
         
         # # Save test results
-        test_df.to_csv(f"claude_code_results/{model_name}/test_results_{loop}.csv", index=False)
+        test_df.to_csv(f"claude_code_results/{model_name}/{repo}_test_results_{loop}.csv", index=False)
         
         # Calculate accuracy
         train_acc = sum(train_df["pass_or_fail"] == "pass") / len(train_df)
@@ -225,7 +261,7 @@ def run_optimization_loop(dataset_name, train_ids, test_ids, train_dataset_obj, 
         # Evaluate results
         print("\nEvaluating train results...")
         evaluated_train_results = asyncio.run(evaluate_results(train_df, model="gpt-4.1"))
-        evaluated_train_results.to_csv(f"claude_code_results/{model_name}/evaluated_train_results_{loop}.csv", index=False)
+        evaluated_train_results.to_csv(f"claude_code_results/{model_name}/{repo}_evaluated_train_results_{loop}.csv", index=False)
         
         # Log to Phoenix
         print("Logging experiment to Phoenix...")
@@ -235,7 +271,7 @@ def run_optimization_loop(dataset_name, train_ids, test_ids, train_dataset_obj, 
                 hostname=HOSTNAME,
                 api_key=os.getenv("PHOENIX_API_KEY"),
                 dataset_obj=train_dataset_obj,
-                experiment_name=f"Train {loop}",
+                experiment_name=f"{repo} Train {loop}",
                 experiment_df=evaluated_train_results,
                 metadata={
                     "loop": loop,
@@ -263,11 +299,11 @@ def run_optimization_loop(dataset_name, train_ids, test_ids, train_dataset_obj, 
         )
         
         # Save ruleset
-        with open(f"act_rulesets/{model_name}/ruleset_{loop}.txt", "w") as f:
+        with open(f"act_rulesets/{model_name}/{repo}_ruleset_{loop}.txt", "w") as f:
             f.write(f"train_accuracy: {train_acc}\n")
             f.write(f"test_accuracy: {test_acc}\n")
             f.write(f"optimized ruleset_{loop}:\n{ruleset}\n")
-        print(f"✓ Saved ruleset to act_rulesets/{model_name}/ruleset_{loop}.txt")
+        print(f"✓ Saved ruleset to act_rulesets/{model_name}/{repo}_ruleset_{loop}.txt")
         
         print(f"\n{'='*80}")
         print(f"Completed loop {loop}")
@@ -279,15 +315,18 @@ def main():
     print("="*80)
     print("Claude Code Optimization")
     print("="*80)
-    
-    phoenix_client = Client()
+    # model_names = ["claude-sonnet-4-5-20250929", "claude-haiku-4-5-20251001"]
+    model_name = "claude-sonnet-4-5-20250929"
 
-    dataset_name, train_ids, test_ids, train_pd, test_pd = load_and_split_dataset()
+    train_name = "Claude Code: Django Train"
+    test_name = "Claude Code: Django Test"
     
-    train_dataset_obj, test_dataset_obj = setup_phoenix(train_pd, test_pd, model_name="claude-haiku-4-5-20251001")
+    dataset_name, train_ids, test_ids, train_pd, test_pd = load_split_swebench_repo(repo="django/django", train_percentage=0.6)
+    
+    train_dataset_obj, test_dataset_obj = setup_phoenix(train_pd, test_pd, train_name, test_name, model_name=model_name)
     
     # Run optimization loop
-    run_optimization_loop(dataset_name=dataset_name, train_ids=train_ids, test_ids=test_ids, train_dataset_obj=train_dataset_obj, ruleset=" ", model_name="claude-haiku-4-5-20251001")
+    run_optimization_loop(dataset_name=dataset_name, train_ids=train_ids, test_ids=test_ids, train_dataset_obj=train_dataset_obj, ruleset=" ", repo="django", model_name=model_name)
     
     print("\n" + "="*80)
     print("✓ Optimization complete!")

@@ -1,0 +1,59 @@
+train_accuracy: 0.0
+test_accuracy: 0.0
+optimized ruleset_4:
+- Prefer precise, minimal changes that strictly satisfy documented behavior and unit tests; include edge-case handling and idempotency checks to avoid repeated operations or crashes.
+- When adding or reducing migration operations:
+  - Ensure correct dependency ordering (e.g., AlterOrderWithRespectTo before indexes/constraints that rely on generated columns).
+  - Collapse consecutive equivalent operations (e.g., multiple AlterField) and no-op renames (old == new).
+  - Make operations idempotent where appropriate to prevent duplicate-object errors on re-application.
+- Always honor the database alias/using parameter:
+  - Set instance._state.db before create/bulk_create to route writes properly.
+  - Do not create schema/records on other databases when a specific alias is provided.
+- Use concrete models’ _meta for proxy/inheritance scenarios when building queries or masks, and for select_related/only/defer resolution.
+- For queryset APIs:
+  - Enforce unsupported operations on combined (union/intersect/except) queries (e.g., .distinct()) with clear errors.
+  - Correctly merge/clear deferred/only fields when chained so effective selections match intention.
+  - Avoid GROUP BY alias/column collisions by falling back to expressions or disabling aliases if an alias matches a joined column.
+  - Use Exists/OuterRef to apply limit_choices_to and similar filters to prevent duplicate rows from joins.
+  - Validate lookup types (e.g., isnull requires bool; warn now, error later).
+- Serialization/code generation:
+  - Include required imports (e.g., from django.db import models) when serializing special values.
+  - Use __qualname__ for nested class/method serialization to preserve full path.
+  - Reconstruct objects via deconstruct() for copying/combine operations instead of deepcopy to avoid unpickleables.
+- Choices and display logic:
+  - Don’t overwrite get_FOO_display() if explicitly defined on the class (__dict__ membership); allow overriding inherited choices.
+  - Ensure TextChoices/IntegerChoices __str__ returns the underlying value.
+- Forms and widgets:
+  - For non-labelable widgets (e.g., ReadOnlyPasswordHashWidget), return None from id_for_label to suppress invalid “for” attributes.
+  - When rendering non-form errors for formsets, use ErrorList(error_class='nonform').
+  - Prevent duplicate options in form fields by deduplicating queryset with Exists/OuterRef as needed.
+- Template filters and escaping:
+  - For join filter, escape joiner only when autoescape is on; with autoescape off, do not escape the joiner or items.
+  - Respect an empty __all__ by showing no module members; treat None (__all__ undefined) as the “want all” case.
+- Static/media URL handling:
+  - Apply SCRIPT_NAME only to relative paths; leave absolute URLs and absolute paths unchanged.
+- Error reporting and logging:
+  - Log exceptions caught in robust signal sends with logger.exception/error including exc_info.
+  - When cwd changes, render absolute paths in failure reports to avoid confusing relative paths.
+  - Improve skip messages: module-level pytest.skip should mention allow_module_level=True and not degrade skip location.
+- Encoding/decoding and streaming:
+  - For response.iter_content(decode_unicode=True), use an incremental decoder; if encoding is None, use apparent_encoding; raise a UnicodeError if the codec is unavailable.
+  - Treat memoryview like bytes for HttpResponse content.
+- HTTP exception wrapping:
+  - Wrap lower-level exceptions (e.g., socket.error) into high-level library exceptions (e.g., ConnectionError) at stream boundaries.
+- AST/rewriter/import handling:
+  - Handle decorator lines as part of statements; treat only string constants as module docstrings; avoid treating non-strings as docstrings.
+  - Support unrolling of all(...) (and similar) in assert rewriting for better messages.
+  - Under importlib import mode, return existing sys.modules[module_name] to avoid duplicate imports; ensure import name uniqueness in tests.
+- Admin/URLs/debug:
+  - ResolverMatch.__repr__ should show functools.partial via repr(self.func); for Django debug 404, handle Http404 thrown by converters.
+  - For readonly FK links, build reverse URLs using current_app (admin site namespace).
+- Media merging/sorting/indexing:
+  - Merge media by stable topological order to preserve relative order and deduplicate.
+  - In Sphinx/indices or similar, treat symbols consistently and avoid duplicate “Symbols” groups.
+- Sessions and security:
+  - On BadSignature during session decode, attempt legacy decode; if unsuccessful, log “Session data corrupted” and return an empty session.
+- CLI/help formatting:
+  - Allow overriding ArgumentParser.formatter_class via create_parser kwargs (use kwargs.setdefault to preserve custom formatters).
+- Equality/hash/ordering:
+  - Implement equality/hash for complex exception/validation/field objects in an order-insensitive manner where appropriate; include model in Field comparisons to avoid equality across different models.

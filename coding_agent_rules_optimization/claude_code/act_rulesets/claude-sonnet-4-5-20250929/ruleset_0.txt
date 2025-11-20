@@ -1,0 +1,23 @@
+train_accuracy: 0.58
+test_accuracy: 0.40
+optimized ruleset_0:
+- When fixing or updating code, always ensure that fixes apply at the correct level in the call hierarchy so that all code paths and callers benefit, not just downstream consumers.
+- When modifying error or warning messages, ensure that all user-facing text is precise, actionable, and matches expected phrasing and test requirements.
+- For equality, ordering, or hashing of objects, always ensure that all relevant identifying attributes are considered to prevent unintended collisions or equality between distinct instances.
+- When overriding behavior via dynamic or inherited configuration (e.g., settings properties, per-method kwarg overrides), ensure your implementation honors all documented means of intent and override precedence.
+- Handle empty, None, or special values in API and field logic carefully—make sure that semantics for these are both consistent and fully covered by tests, especially for serialization, filtering, and decoding.
+- When adding logic that recycles, clones, or reconstructs objects, avoid using copy/deepcopy on objects that might be incompatible; prefer constructor or explicit re-instantiation if data may be unpickleable.
+- Always preserve expected object types and context (e.g., Enum, model field types) unless explicitly converting.
+- When making changes related to internationalization, string formatting, or user input, default to safe, robust handling that avoids unintended behaviors with edge cases (such as character encodings, line endings, or regular expression quirks).
+- For code that handles paths, environment, or relative/absolute references, always use the most reliable reference point (e.g., invocation directory, normalized paths, appropriate prefixing) and ensure consistency regardless of execution context.
+- When handling plugin, module, or import mechanisms, always check and interact with global registries (e.g., sys.modules) to prevent object duplication and surprising results across imports.
+- Ensure any dynamic or lazy attribute accesses (such as __str__, __repr__, or __getattribute__) are implemented defensively to avoid inflexible or error-prone behavior, especially for use in debug, error, or display logic.
+- Apply database, router, or connection options consistently to all operations (including related objects or migrations) to avoid cross-database writes and router violations.
+- ALWAYS ensure new logic maintains both backward compatibility and consistency with test expectations in error, warning, and edge-case behavior.
+- Ensure that logic for combining, chaining, or sequencing operations maintains correct dependency and execution order, especially for migration operations, field updates, or model methods.
+- Always prefer warning first before raising errors when deprecating unsupported usage, to allow a transition period for user code.
+- Propagate (pass) alias, context, or relevant arguments through method and function calls whenever downstream logic depends on them for correctness.
+- For deduplication or ordering logic (e.g., lists, sets, or database results), always ensure that groupings and uniqueness are determined consistently and not reliant on side effects or implementation detail.
+- When extending logic to add configurability (e.g., help formatters, custom formatters, or interfaces), always document new extension points and ensure that class and per-instance overrides are supported according to user expectations.
+- When handling reverse or special magic methods (e.g., __radd__, __iadd__, __len__, etc.) for proxies or dynamically wrapped objects, implement all needed operations for full compatibility and parity with the proxied object.
+- Avoid duplicating implementation logic if battle-tested utilities already exist in the codebase—reuse robust code for common concerns like ordering, deduplication, sorting, and error normalization.

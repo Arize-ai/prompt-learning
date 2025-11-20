@@ -1,0 +1,16 @@
+train_accuracy: 0.6133333333333333
+test_accuracy: 0.45185185185185184
+optimized ruleset_1:
+- When modifying or generating APIs that provide string representations (e.g., __str__, __repr__), always ensure the output matches user expectations and established library interface contracts, especially when type or context may change.
+- When overriding equality (__eq__) or hashing (__hash__) logic for objects that can have mutable or nested structures, ensure comparisons are both order-insensitive (where applicable) and type-consistent, and that objects of different structures (e.g., error_dict vs error_list) are never treated as equal.
+- When handling serialization and deserialization logic (e.g., for sessions, cookies, migrations), always validate, sanitize, and handle corrupted or malformed input gracefully; never assume that external data is valid and avoid propagating exceptions that would crash core application flows.
+- When rewriting, generating, or transforming code (e.g., AST, SQL, or migrations), always take care to operate on canonical (fully normalized or de-aliased) representations; ensure that identifiers, aliases, and references are resolved correctly to avoid ambiguity, conflicts, or collisions.
+- Do not assume that attributes, configuration values, or settings are always present, not-None, or have valid types; always check types and presence explicitly before applying operations (e.g., str, in, method calls).
+- When optimizing or reducing operation sequences (such as in migration or data-processing optimizers), ensure the result preserves correct semantic ordering, idempotence, and does not inadvertently drop necessary intermediate operations.
+- Always propagate all contextual parameters (e.g., "using" for database, "request" for URL generation, scripting environment, or permission context) through layers of abstraction to avoid silent routing errors or implicit global fallback.
+- When expanding or rewriting comprehensions, loops, or expression trees, do so only under conditions that preserve semantic equivalence—avoid transformation if filters, multiple generators, or side effects could alter behavior.
+- When combining or deduplicating value lists in output generation, keep ordering, grouping, and deduplication idempotent and deterministic; always avoid introducing duplicate entries or unintended reordering that could change output semantics.
+- Always log exceptions or error events at the point of exception handling—especially when silently catching exceptions intended for robustness (e.g., in signal dispatchers, hooks, or extensibility APIs)—to ensure issues are visible for debugging and monitoring.
+- For any API that accepts or passes through arbitrary user input, configuration, or template values, always validate for correct types and formats and provide clear, actionable error or warning messages.
+- When creating or rewriting objects that may contain non-standard or non-picklable values (e.g., dict_keys, custom iterables), normalize these into safe, serializable, and copyable types before deep copying or passing them further.
+- Avoid in-place modification of arguments or cached properties that are global, thread-local, or context-dependent unless thread safety, request-safety, and correct per-request/per-thread value propagation is ensured.

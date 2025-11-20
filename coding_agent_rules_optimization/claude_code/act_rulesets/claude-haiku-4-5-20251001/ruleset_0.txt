@@ -1,0 +1,4 @@
+train_accuracy: 0.4666666666666667
+test_accuracy: 0.42962962962962964
+optimized ruleset_0:
+ 
