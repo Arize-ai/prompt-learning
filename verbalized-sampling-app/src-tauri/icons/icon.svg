@@ -1,0 +1,39 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Distribution curve gradient -->
+    <linearGradient id="curveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.6" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bgGradient)"/>
+
+  <!-- Distribution curve (bell curve) -->
+  <path d="M 100 380 Q 256 120, 412 380"
+        stroke="url(#curveGradient)"
+        stroke-width="8"
+        fill="none"
+        stroke-linecap="round"/>
+
+  <!-- Sample points on distribution -->
+  <circle cx="180" cy="310" r="16" fill="#ffffff" opacity="0.9"/>
+  <circle cx="220" cy="240" r="18" fill="#ffffff" opacity="0.95"/>
+  <circle cx="256" cy="180" r="24" fill="#ffffff"/>
+  <circle cx="292" cy="240" r="18" fill="#ffffff" opacity="0.95"/>
+  <circle cx="332" cy="310" r="16" fill="#ffffff" opacity="0.9"/>
+
+  <!-- Probability bars underneath -->
+  <rect x="170" y="340" width="20" height="30" fill="#ffffff" opacity="0.6" rx="4"/>
+  <rect x="210" y="320" width="20" height="50" fill="#ffffff" opacity="0.7" rx="4"/>
+  <rect x="246" y="300" width="20" height="70" fill="#ffffff" opacity="0.9" rx="4"/>
+  <rect x="282" y="320" width="20" height="50" fill="#ffffff" opacity="0.7" rx="4"/>
+  <rect x="322" y="340" width="20" height="30" fill="#ffffff" opacity="0.6" rx="4"/>
+</svg>
