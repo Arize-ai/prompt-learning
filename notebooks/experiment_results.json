@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-11-22T13:28:53.738640",
+  "results": {
+    "train": [
+      0.4
+    ],
+    "test": [
+      0.0,
+      0.6
+    ],
+    "prompt": [
+      "You are an expert in JSON webpage creation. This is your task: {input}",
+      "You are an expert in JSON webpage creation, tasked with generating a JSON structure for creating a webpage. Your goal is to adhere to the following guidelines closely:\n\n1. Include a 'type' field for every section object, drawn from the fixed vocabulary: header, text, image, productGrid, gallery, form, button, footer, embed.\n2. Ensure each section includes necessary attributes such as 'alt' text for images, submit 'action' and 'method' fields for forms, and currency symbols are not quoted.\n3. Provide an 'updatedAt' field with an ISO-8601 timestamp in the JSON output.\n4. Use valid links, ensuring external links use HTTPS unless explicitly flagged in a 'warnings' array.\n5. Always adhere to correct JSON syntax, ensuring numeric values remain numeric, and internal links start with a '/'.\n\nConsider the input details carefully: {input}"
+    ],
+    "raw": [
+      "     Unnamed: 0                                              input  \\\n484         484  Design an event page for a concert with lineup...   \n90           90  Create a webpage for a virtual art gallery fea...   \n881         881  Create a webpage for a workout challenge app w...   \n954         954  Design an online auction page with sections fo...   \n840         840  Design a webpage that has three sections: a we...   \n\n                                                output  \\\n484  {\\n  \"event\": {\\n    \"title\": \"Summer Music Fe...   \n90   {\\n  \"html\": {\\n    \"head\": {\\n      \"title\": ...   \n881  \\n{\\n  \"html\": {\\n    \"head\": {\\n      \"title\"...   \n954  \\n{\\n  \"webpage\": {\\n    \"title\": \"Online Auct...   \n840  \\n{\\n  \"webpage\": {\\n    \"title\": \"Welcome to ...   \n\n                                           explanation correctness  \n484  The generated JSON fails to meet several rules...   incorrect  \n90   The generated JSON web page has a number of vi...   incorrect  \n881  The generated JSON web page violates several r...   incorrect  \n954  The generated JSON web page violates several r...   incorrect  \n840  The generated JSON web page does not adhere to...   incorrect  ",
+      "     Unnamed: 0                                              input  \\\n484         484  Design an event page for a concert with lineup...   \n90           90  Create a webpage for a virtual art gallery fea...   \n881         881  Create a webpage for a workout challenge app w...   \n954         954  Design an online auction page with sections fo...   \n840         840  Design a webpage that has three sections: a we...   \n\n                                                output  \\\n484  {\\n  \"page\": {\\n    \"title\": \"Concert Event Pa...   \n90   {\\n  \"webpage\": {\\n    \"title\": \"Virtual Art G...   \n881  {\\n  \"webpage\": {\\n    \"title\": \"Workout Chall...   \n954  {\\n  \"page\": {\\n    \"title\": \"Online Auction\",...   \n840  {\\n  \"webpage\": {\\n    \"sections\": [\\n      {\\...   \n\n                                           explanation correctness  \n484  The generated JSON web page adheres to the giv...     correct  \n90   The generated JSON conforms to the specified r...     correct  \n881  The JSON includes non-HTTPS URLs and lacks the...   incorrect  \n954  1. The JSON contains all required sections (ac...     correct  \n840  The generated JSON web page violates rule set ...   incorrect  "
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+iteration,test_accuracy,prompt,train_accuracy
+0,0.0,You are an expert in JSON webpage creation. This is your task: {input},0.4
+1,0.6,"You are an expert in JSON webpage creation, tasked with generating a JSON structure for creating a webpage. Your goal is to adhere to the following guidelines closely:
+
+1. Include a 'type' field for every section object, drawn from the fixed vocabulary: header, text, image, productGrid, gallery, form, button, footer, embed.
+2. Ensure each section includes necessary attributes such as 'alt' text for images, submit 'action' and 'method' fields for forms, and currency symbols are not quoted.
+3. Provide an 'updatedAt' field with an ISO-8601 timestamp in the JSON output.
+4. Use valid links, ensuring external links use HTTPS unless explicitly flagged in a 'warnings' array.
+5. Always adhere to correct JSON syntax, ensuring numeric values remain numeric, and internal links start with a '/'.
+
+Consider the input details carefully: {input}",
