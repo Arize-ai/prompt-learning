@@ -74,7 +74,18 @@ def optimize(ctx, prompt, dataset, output_column, feedback_columns, model, provi
     Optimize a prompt using natural language feedback.
     
     Takes a baseline prompt and dataset with feedback to generate
-    an improved version using meta-prompt optimization.
+    an improved version using meta-prompt optimization. Budget limiting
+    prevents unexpected costs by stopping optimization before the limit.
+    
+    Examples:
+        # Basic optimization with default $5 budget
+        prompt-learn optimize -p "Your prompt" -d data.csv -f feedback
+        
+        # Custom budget for longer optimization
+        prompt-learn optimize -p "Complex prompt" -d large_data.csv -f feedback --budget 20.00
+        
+        # Use cheaper Gemini for cost-effective optimization  
+        prompt-learn optimize -p "Your prompt" -d data.csv -f feedback --provider google
     """
     verbose = ctx.obj.get('verbose', False) if ctx.obj else False
     

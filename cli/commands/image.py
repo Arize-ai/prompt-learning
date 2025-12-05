@@ -52,6 +52,17 @@ def image(prompt, provider, iterations, output_dir, evaluate, budget):
     Test image generation prompts with nano banana.
     
     Generates multiple images and evaluates consistency and quality.
+    Budget limiting prevents unexpected image generation costs.
+    
+    Examples:
+        # Generate images with default $2 budget
+        prompt-learn image -p "A red sports car in the mountains"
+        
+        # Custom budget for more iterations
+        prompt-learn image -p "Complex scene" --iterations 10 --budget 5.00
+        
+        # Generate and evaluate for prompt improvement
+        prompt-learn image -p "Your prompt" --evaluate --budget 3.00
     """
     
     print(f"Testing image prompt: {prompt[:100]}...")

@@ -28,20 +28,28 @@ def cli(ctx, verbose):
         
     \b
     Examples:
-        # Optimize with OpenAI
+        # Optimize with OpenAI (default $5 budget)
         prompt-learn optimize \\
             --prompt "Summarize this text clearly" \\
             --dataset examples.csv \\
             --feedback-columns human_rating \\
             --provider openai
             
-        # Generate and evaluate images  
+        # Optimize with custom budget
+        prompt-learn optimize \\
+            --prompt "Your prompt" \\
+            --dataset data.csv \\
+            --feedback-columns feedback \\
+            --budget 10.00
+            
+        # Generate and evaluate images with budget
         prompt-learn image \\
             --prompt "A futuristic cityscape at sunset" \\
             --iterations 3 \\
+            --budget 1.50 \\
             --evaluate
             
-        # Run with verbose output
+        # Run with verbose output to see costs
         prompt-learn --verbose optimize -p "Your prompt" -d data.csv -f feedback
     
     Environment Variables:
