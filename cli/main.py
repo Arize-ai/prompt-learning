@@ -4,9 +4,10 @@ Main CLI entry point for prompt learning optimization.
 
 import click
 from .commands import optimize, evaluate, test, image
+from .version import __version__
 
 @click.group()
-@click.version_option()
+@click.version_option(version=__version__, prog_name="prompt-learn")
 @click.option(
     "--verbose", "-v", 
     is_flag=True, 
