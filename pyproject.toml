@@ -1,0 +1,93 @@
+[project]
+name = "prompt-learning"
+version = "0.1.0"
+description = "Prompt learning optimization using natural language feedback"
+readme = "README.md"
+license = { file = "LICENSE.txt" }
+authors = [
+    { name = "Arize AI", email = "pjindal@arize.com" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "arize-phoenix-evals",
+    "arize-phoenix-client", 
+    "tiktoken",
+    "openai",
+    "arize-toolkit",
+    "pandas",
+    "scikit-learn",
+    "nest-asyncio",
+    "swebench",
+    # New dependencies for CLI and enhanced functionality
+    "click",
+    "google-genai",
+    "pillow",
+    "requests",
+    "pydantic",
+    "httpx",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "black",
+    "flake8",
+    "mypy",
+    "pre-commit",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "myst-parser",
+]
+
+[project.urls]
+Homepage = "https://github.com/Arize-ai/prompt-learning"
+Repository = "https://github.com/Arize-ai/prompt-learning"
+Documentation = "https://github.com/Arize-ai/prompt-learning#readme"
+Issues = "https://github.com/Arize-ai/prompt-learning/issues"
+
+[project.scripts]
+prompt-learn = "cli.main:cli"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["optimizer_sdk*", "cli*", "providers*"]
+
+[tool.setuptools.package-data]
+"optimizer_sdk" = ["templates/*.txt"]
+"cli" = ["config/*.yaml"]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
