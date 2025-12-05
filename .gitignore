@@ -1,5 +1,6 @@
 .DS_STORE 
 __pycache__
-*.egg-infoimage_outputs/
+*.egg-info
+image_outputs/
 test_dataset.csv
 metaprompt.txt
