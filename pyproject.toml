@@ -40,6 +40,9 @@ dependencies = [
     "httpx",
     "rich>=14.2.0",
     "click-spinner>=0.1.10",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-mock>=3.15.1",
 ]
 
 [project.optional-dependencies]
