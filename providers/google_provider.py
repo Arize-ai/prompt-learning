@@ -8,25 +8,26 @@ from google import genai
 from google.genai import types
 
 from .base_provider import ModelProvider, ModelCapabilities
+from core.exceptions import ProviderError
 
 class GoogleProvider(ModelProvider):
     """Google AI provider using Gemini models with grounding."""
     
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
+    def __init__(self, api_key: Optional[str] = None, **kwargs: Any) -> None:
         super().__init__(api_key, **kwargs)
         
         # Initialize Google AI
         api_key = api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not api_key:
-            raise ValueError("Google API key required. Set GOOGLE_API_KEY or GEMINI_API_KEY environment variable.")
+            raise ProviderError("Google API key required. Set GOOGLE_API_KEY or GEMINI_API_KEY environment variable.")
         
         self.client = genai.Client(api_key=api_key)
         
         # Default model
-        self.default_model = kwargs.get("model", "gemini-2.5-flash")
+        self.default_model: str = kwargs.get("model", "gemini-2.5-flash")
         
         # Model capabilities mapping
-        self._model_capabilities = {
+        self._model_capabilities: Dict[str, ModelCapabilities] = {
             "gemini-2.5-flash": ModelCapabilities(
                 supports_text=True,
                 supports_images=False,
@@ -71,31 +72,34 @@ class GoogleProvider(ModelProvider):
         
         return response.text
     
-    async def generate_with_grounding(self, messages: List[Dict[str, str]], model: str, **kwargs) -> str:
+    async def generate_with_grounding(self, messages: List[Dict[str, str]], model: str, **kwargs: Any) -> str:
         """Generate response with Google Search grounding."""
         
         model_name = model or self.default_model
         
-        # Configure Google Search tool
-        grounding_tool = types.Tool(
-            google_search=types.GoogleSearch()
-        )
-        
-        config = types.GenerateContentConfig(
-            tools=[grounding_tool]
-        )
-        
-        # Convert messages to Gemini format
-        prompt_text = self._format_messages(messages)
-        
-        # Generate response with grounding
-        response = self.client.models.generate_content(
-            model=model_name,
-            contents=prompt_text,
-            config=config,
-        )
-        
-        return response.text
+        try:
+            # Configure Google Search tool
+            grounding_tool = types.Tool(
+                google_search=types.GoogleSearch()
+            )
+            
+            config = types.GenerateContentConfig(
+                tools=[grounding_tool]
+            )
+            
+            # Convert messages to Gemini format
+            prompt_text = self._format_messages(messages)
+            
+            # Generate response with grounding
+            response = self.client.models.generate_content(
+                model=model_name,
+                contents=prompt_text,
+                config=config,
+            )
+            
+            return response.text
+        except Exception as e:
+            raise ProviderError(f"Google grounding generation failed: {e}")
     
     def _format_messages(self, messages: List[Dict[str, str]]) -> str:
         """Convert OpenAI-style messages to Gemini prompt format."""
