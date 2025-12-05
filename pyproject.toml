@@ -1,24 +1,29 @@
 [project]
-name = "prompt-learning"
+name = "prompt-learning-enhanced"
 version = "0.1.0"
-description = "Prompt learning optimization using natural language feedback"
+description = "Enhanced prompt learning SDK with CLI, Google AI integration, pricing controls, and production features"
 readme = "README.md"
 license = { file = "LICENSE.txt" }
 authors = [
-    { name = "Arize AI", email = "pjindal@arize.com" }
+    { name = "Arize AI", email = "pjindal@arize.com" },
+    { name = "Nouamane Benbrahim", email = "nouamane.benbrahim@protonmail.com" },
+    { name = "Priyan Jindal", email = "priyan.jindal@arize.ai" }
 ]
+keywords = ["prompt-learning", "llm", "optimization", "ai", "cli", "google-ai", "openai", "meta-prompt", "natural-language-feedback"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.10", 
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
 ]
 requires-python = ">=3.9"
 dependencies = [
@@ -31,24 +36,22 @@ dependencies = [
     "scikit-learn",
     "nest-asyncio",
     "swebench",
-    # New dependencies for CLI and enhanced functionality
+    # Enhanced CLI and provider functionality
     "click",
     "google-genai",
     "pillow",
     "requests",
     "pydantic",
     "httpx",
-    "rich>=14.2.0",
-    "click-spinner>=0.1.10",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "pytest-mock>=3.15.1",
+    "rich",
+    "click-spinner",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
     "pytest-asyncio",
+    "pytest-mock",
     "black",
     "flake8",
     "mypy",
@@ -75,7 +78,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["optimizer_sdk*", "cli*", "providers*"]
+include = ["optimizer_sdk*", "cli*", "providers*", "core*", "interfaces*", "config*"]
 
 [tool.setuptools.package-data]
 "optimizer_sdk" = ["templates/*.txt"]
