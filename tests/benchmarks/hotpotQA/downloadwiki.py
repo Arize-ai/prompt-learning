@@ -24,4 +24,6 @@ corpus_tokens = bm25s.tokenize(corpus, stopwords="en", stemmer=stemmer)
 retriever = bm25s.BM25(k1=0.9, b=0.4)
 retriever.index(corpus_tokens)
 
-retriever.save("wiki17_abstracts", corpus=corpus, corpus_name="wiki17_abstracts_corpus.jsonl")
+retriever.save(
+    "wiki17_abstracts", corpus=corpus, corpus_name="wiki17_abstracts_corpus.jsonl"
+)

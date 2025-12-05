@@ -91,22 +91,17 @@ Return your evaluation strictly in this JSON-like format (no markdown, no extra 
 "suggestions": "<specific, actionable improvement ideas for each component—query generation, retrieval, summaries, and verdict synthesis>"
 """
 
+
 def compute_attach_correctness(df: pd.DataFrame) -> tuple[pd.DataFrame, float]:
     accuracy = (df["final_answer"] == df["ground_truth_label"]).mean()
-    df["correctness"] = np.where(df["final_answer"] == df["ground_truth_label"], "correct", "incorrect")
+    df["correctness"] = np.where(
+        df["final_answer"] == df["ground_truth_label"], "correct", "incorrect"
+    )
     return df, accuracy
 
+
 def attach_evals(df: pd.DataFrame) -> pd.DataFrame:
-    model = OpenAIModel(
-        model="gpt-4.1",
-        api_key=os.getenv("OPENAI_API_KEY")
-    )
-    evals = llm_generate(
-        dataframe=df,
-        template=EVAL_PROMPT,
-        model=model
-    )
+    model = OpenAIModel(model="gpt-4.1", api_key=os.getenv("OPENAI_API_KEY"))
+    evals = llm_generate(dataframe=df, template=EVAL_PROMPT, model=model)
     df["evaluation"] = evals["output"]
     return df
-
-

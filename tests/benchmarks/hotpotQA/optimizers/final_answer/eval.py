@@ -4,14 +4,15 @@ import re
 import string
 from collections import Counter
 
+
 def normalize_answer(s):
     """Normalize answer string: lowercase, remove articles, remove punctuation, fix whitespace."""
     # Remove articles
-    s = re.sub(r'\b(a|an|the)\b', ' ', s)
+    s = re.sub(r"\b(a|an|the)\b", " ", s)
     # Remove punctuation
-    s = ''.join(ch if ch not in string.punctuation else ' ' for ch in s)
+    s = "".join(ch if ch not in string.punctuation else " " for ch in s)
     # Fix whitespace and lowercase
-    return ' '.join(s.lower().split())
+    return " ".join(s.lower().split())
 
 
 def exact_match(prediction, gold):
@@ -23,23 +24,24 @@ def compute_f1(prediction, gold):
     """Compute F1, precision, recall at token level."""
     pred_tokens = normalize_answer(prediction).split()
     gold_tokens = normalize_answer(gold).split()
-    
+
     # Count common tokens
     common = Counter(pred_tokens) & Counter(gold_tokens)
     num_common = sum(common.values())
-    
+
     # Edge cases
     if num_common == 0:
         return 0.0, 0.0, 0.0
     if len(pred_tokens) == 0 or len(gold_tokens) == 0:
         return 0.0, 0.0, 0.0
-    
+
     # Compute metrics
     precision = num_common / len(pred_tokens)
     recall = num_common / len(gold_tokens)
     f1 = (2 * precision * recall) / (precision + recall)
-    
+
     return f1, precision, recall
+
 
 # Initialize the LLM once (reused across evaluations)
 llm = LLM(provider="openai", model="gpt-4.1-mini")
@@ -97,8 +99,7 @@ def evaluator(input, output, expected):
     f1_score, precision, recall = compute_f1(output, gold_answer)
 
     prompt = (
-        EVALUATION_PROMPT
-        .replace("{question}", input["question"])
+        EVALUATION_PROMPT.replace("{question}", input["question"])
         .replace("{summary_1}", input["summary_1"])
         .replace("{summary_2}", input["summary_2"])
         .replace("{gold_answer}", gold_answer)
@@ -108,13 +109,16 @@ def evaluator(input, output, expected):
         .replace("{precision}", str(precision))
         .replace("{recall}", str(recall))
     )
-    
+
     explanation = llm.generate_text(prompt=prompt)
-    explanation = f"""
+    explanation = (
+        f"""
     f1_score: {f1_score}
     precision: {precision}
     recall: {recall}
     exact_match: {exact_match_score}
-    """ + explanation
-    
+    """
+        + explanation
+    )
+
     return {"score": f1_score, "explanation": explanation}

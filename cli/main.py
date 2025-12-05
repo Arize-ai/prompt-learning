@@ -6,12 +6,14 @@ import click
 from .commands import optimize, evaluate, test, image
 from .version import __version__
 
+
 @click.group()
 @click.version_option(version=__version__, prog_name="prompt-learn")
 @click.option(
-    "--verbose", "-v", 
-    is_flag=True, 
-    help="Enable verbose output with detailed progress information"
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Enable verbose output with detailed progress information",
 )
 @click.pass_context
 def cli(ctx, verbose):
@@ -63,11 +65,12 @@ def cli(ctx, verbose):
     """
     # Store verbose flag in context for commands to access
     ctx.ensure_object(dict)
-    ctx.obj['verbose'] = verbose
+    ctx.obj["verbose"] = verbose
+
 
 # Add command groups
 cli.add_command(optimize.optimize)
-cli.add_command(evaluate.evaluate) 
+cli.add_command(evaluate.evaluate)
 cli.add_command(test.test)
 cli.add_command(image.image)
 

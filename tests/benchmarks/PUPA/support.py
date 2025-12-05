@@ -16,9 +16,7 @@ agent = create_agent(model=model, tools=[web_search_tool])
 
 message = {
     "role": "user",
-    "content": [
-        {"type": "text", "text": "could you check upcoming events in Madrid?"}
-    ],
+    "content": [{"type": "text", "text": "could you check upcoming events in Madrid?"}],
 }
 
 response = agent.invoke({"messages": message})

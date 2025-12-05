@@ -5,7 +5,8 @@ from pathlib import Path
 
 # Reuse the HotpotQA search utility if available at sibling level
 import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'hotpotQA'))
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hotpotQA"))
 from search import search
 
 from phoenix.evals import OpenAIModel, llm_generate
@@ -22,28 +23,36 @@ def generate_output(df: pd.DataFrame, template: str) -> pd.Series:
     )
     return outputs["output"]
 
+
 def _format_passages(docs):
     if isinstance(docs, list):
-        return "\n\n".join([
-            f"{d.get('title','')}\n{d.get('content','')}" for d in docs if isinstance(d, dict)
-        ])
+        return "\n\n".join(
+            [
+                f"{d.get('title','')}\n{d.get('content','')}"
+                for d in docs
+                if isinstance(d, dict)
+            ]
+        )
     return str(docs)
+
 
 def run_pipeline(prompts: dict, dataset: pd.DataFrame) -> pd.DataFrame:
     # Expect dataset to have a column 'claim'
-    df = pd.DataFrame({
-        "claim": dataset["claim"],
-        "uid": dataset["uid"],
-        "ground_truth_label": dataset["label"],
-        "ground_truth_wikipedia_titles": dataset["supporting_facts"],
-    })
+    df = pd.DataFrame(
+        {
+            "claim": dataset["claim"],
+            "uid": dataset["uid"],
+            "ground_truth_label": dataset["label"],
+            "ground_truth_wikipedia_titles": dataset["supporting_facts"],
+        }
+    )
     df.set_index("uid", inplace=True, drop=False)
 
     # Hop 1
     df["query_1"] = generate_output(df, prompts["create_query_1_prompt"])
     df["passages_1"] = df["query_1"].apply(lambda q: search(q, 5))
     # Format passages for summarize1: expects {passages}
-    
+
     df["passages_1"] = df["passages_1"].apply(_format_passages)
     df["summary_1"] = generate_output(df, prompts["summarize_1_prompt"])
 
@@ -94,5 +103,3 @@ def run_pipeline(prompts: dict, dataset: pd.DataFrame) -> pd.DataFrame:
 
 # if __name__ == "__main__":
 #     main()
-
-

@@ -26,22 +26,26 @@ You MUST return a JSON object with exactly two fields:
 def evaluate_response(input, output, expected):
     response = output["final_response"]
     constraints = input["constraint"]
-    
-    prompt = EVALUATION_PROMPT.replace("{response}", response).replace("{constraints}", constraints)
+
+    prompt = EVALUATION_PROMPT.replace("{response}", response).replace(
+        "{constraints}", constraints
+    )
     response = llm.generate_object(
         prompt=prompt,
         schema={
             "type": "object",
             "properties": {
-                "label": {
-                    "type": "string",
-                    "enum": ["True", "False"]
-                },
-                "explanation": {"type": "string"}
+                "label": {"type": "string", "enum": ["True", "False"]},
+                "explanation": {"type": "string"},
             },
-            "required": ["label", "explanation"]
-        })
+            "required": ["label", "explanation"],
+        },
+    )
     label = response["label"]
     explanation = response["explanation"]
-    
-    return {"label": label, "score": 1.0 if label == "True" else 0.0, "explanation": explanation}
+
+    return {
+        "label": label,
+        "score": 1.0 if label == "True" else 0.0,
+        "explanation": explanation,
+    }

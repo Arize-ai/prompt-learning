@@ -9,55 +9,67 @@ from phoenix.evals import OpenAIModel, llm_generate
 from hotpot_evaluate_v1 import eval
 import time
 
+
 def generate_output(dataset, system_prompt):
-    output_model = OpenAIModel(
-        model="gpt-4.1-mini",
-        temperature=1
-    )
+    output_model = OpenAIModel(model="gpt-4.1-mini", temperature=1)
     outputs = llm_generate(
         dataframe=dataset,
         template=system_prompt,
         model=output_model,
         concurrency=40,
-        verbose=True
+        verbose=True,
     )
     return outputs["output"]
 
-def answer_dataset(dataset, client, create_query_1_prompt, summarize_1_prompt, create_query_2_prompt, summarize_2_prompt, final_answer_prompt):
-    predictions = {
-        "answer": {},
-        "sp": {}
-        }
 
-    questions = pd.DataFrame({"question": dataset["question"], "question_id": dataset["_id"], "gold_answer": dataset["answer"], "supporting_facts": dataset["supporting_facts"]})
+def answer_dataset(
+    dataset,
+    client,
+    create_query_1_prompt,
+    summarize_1_prompt,
+    create_query_2_prompt,
+    summarize_2_prompt,
+    final_answer_prompt,
+):
+    predictions = {"answer": {}, "sp": {}}
+
+    questions = pd.DataFrame(
+        {
+            "question": dataset["question"],
+            "question_id": dataset["_id"],
+            "gold_answer": dataset["answer"],
+            "supporting_facts": dataset["supporting_facts"],
+        }
+    )
     questions.set_index("question_id", inplace=True, drop=False)
-    
+
     # Generate query 1 for all questions
     questions["query_1"] = generate_output(questions, create_query_1_prompt)
-    
+
     # Search for each query individually
     questions["passages_1"] = questions["query_1"].apply(lambda q: search(q, 5))
-    
+
     # Generate summary 1
     questions["summary_1"] = generate_output(questions, summarize_1_prompt)
-    
+
     # Generate query 2
     questions["query_2"] = generate_output(questions, create_query_2_prompt)
-    
+
     # Search for each query 2 individually
     questions["passages_2"] = questions["query_2"].apply(lambda q: search(q, 5))
-    
+
     # Generate summary 2
     questions["summary_2"] = generate_output(questions, summarize_2_prompt)
-    
+
     # Generate final answer
     questions["final_answer"] = generate_output(questions, final_answer_prompt)
-    
+
     for question_id, row in questions.iterrows():
         predictions["answer"][question_id] = row["final_answer"]
         predictions["sp"][question_id] = row["passages_2"]
-    
+
     return questions, predictions
+
 
 def main():
 
@@ -73,7 +85,7 @@ def main():
 
     # sample 150 rows from train_data
     # dataset = train_data.sample(150, random_state=42)
-    
+
     # Save the sampled gold data for evaluation
     dataset.to_json("data/hotpot_dev_sample_300.json", orient="records")
     # dataset.to_json("data/hotpot_train_sample_150.json", orient="records")
@@ -92,12 +104,12 @@ def main():
     # summarize_2_prompt = "Given the fields {question}, {summary_1}, {passages_2}, produce a summary."
     # # final_answer_prompt = "Given the fields {question}, {summary_1}, {summary_2}, produce an answer."
     # final_answer_prompt = """
-    # Given the fields {question}, {summary_1}, {summary_2}, produce a concise and precise answer that directly and minimally responds to the question.  
-    # - Provide the shortest possible answer that fully addresses the question.  
-    # - If the question expects a specific name, date, number, phrase, or list, output only that without any additional explanation, context, or full sentences.  
-    # - For yes/no questions, answer with "yes" or "no" only, without elaboration.  
-    # - Avoid adding extra context, background information, or verbose sentences.  
-    # - If the information is not available or cannot be determined from the summaries, respond with "No information available."  
+    # Given the fields {question}, {summary_1}, {summary_2}, produce a concise and precise answer that directly and minimally responds to the question.
+    # - Provide the shortest possible answer that fully addresses the question.
+    # - If the question expects a specific name, date, number, phrase, or list, output only that without any additional explanation, context, or full sentences.
+    # - For yes/no questions, answer with "yes" or "no" only, without elaboration.
+    # - Avoid adding extra context, background information, or verbose sentences.
+    # - If the information is not available or cannot be determined from the summaries, respond with "No information available."
 
     # # # Answer:
     # # # """
@@ -122,11 +134,18 @@ def main():
 
     Answer:
     """
-    
 
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    questions, predictions = answer_dataset(dataset, client, create_query_1_prompt, summarize_1_prompt, create_query_2_prompt, summarize_2_prompt, final_answer_prompt)
+    questions, predictions = answer_dataset(
+        dataset,
+        client,
+        create_query_1_prompt,
+        summarize_1_prompt,
+        create_query_2_prompt,
+        summarize_2_prompt,
+        final_answer_prompt,
+    )
 
     # questions.to_json("questions/questions_dev_300.json")
     questions.to_json("questions/questions_dev_300.json")
@@ -142,6 +161,7 @@ def main():
 
     end_time = time.time()
     print(f"Time taken: {end_time - start_time} seconds")
+
 
 if __name__ == "__main__":
     main()

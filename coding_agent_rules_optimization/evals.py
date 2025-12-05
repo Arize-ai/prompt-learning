@@ -42,21 +42,22 @@ async def evaluate_results(results: pd.DataFrame, model: str = "gpt-5") -> pd.Da
         "correctness",
         LLM(provider="openai", model=model),
         prompt,
-        choices={"correct": 1, "incorrect": 0}
+        choices={"correct": 1, "incorrect": 0},
     )
     results_df = await async_evaluate_dataframe(
         dataframe=results,
         evaluators=[evaluator],
         concurrency=20,
-        tqdm_bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}"
+        tqdm_bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
     )
     results_df = results_df["correctness_score"]
 
-    results_df = pd.DataFrame(results_df.apply(json.loads).tolist(), index=results_df.index)
+    results_df = pd.DataFrame(
+        results_df.apply(json.loads).tolist(), index=results_df.index
+    )
 
     results["correctness"] = results_df["label"]
     results["explanation"] = results_df["explanation"]
     results["score"] = results_df["score"]
 
-    return results 
-
+    return results
