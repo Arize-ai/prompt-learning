@@ -38,29 +38,29 @@ class DatasetSplitter:
         # Count tokens for each row
         row_token_counts = self.token_counter.count_dataframe_tokens(df, columns)
         
-        # Split into batches
-        batches = []
-        current_batch_indices = []
+        # Pre-calculate batch boundaries to minimize DataFrame operations
+        batch_boundaries = []
+        current_batch_start = 0
         current_batch_tokens = 0
         
         for idx, token_count in enumerate(row_token_counts):
-            # If adding this row would exceed limit, start new batch
-            if current_batch_tokens + token_count > max_tokens and current_batch_indices:
-                # Save current batch
-                batch_df = df.iloc[current_batch_indices].copy()
-                batches.append(batch_df)
-                
-                # Start new batch
-                current_batch_indices = [idx]
+            # If adding this row would exceed limit, finalize current batch
+            if current_batch_tokens + token_count > max_tokens and idx > current_batch_start:
+                batch_boundaries.append((current_batch_start, idx))
+                current_batch_start = idx
                 current_batch_tokens = token_count
             else:
-                # Add to current batch
-                current_batch_indices.append(idx)
                 current_batch_tokens += token_count
         
-        # Add final batch if not empty
-        if current_batch_indices:
-            batch_df = df.iloc[current_batch_indices].copy()
+        # Add final batch boundary
+        if current_batch_start < len(df):
+            batch_boundaries.append((current_batch_start, len(df)))
+        
+        # Create DataFrame slices efficiently using boundaries
+        batches = []
+        for start_idx, end_idx in batch_boundaries:
+            # Use iloc with slice for better performance than index lists
+            batch_df = df.iloc[start_idx:end_idx].copy()
             batches.append(batch_df)
         
         return batches

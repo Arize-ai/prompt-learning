@@ -2,6 +2,9 @@ import copy
 import re
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
+# Compile regex pattern once at module level for performance
+_TEMPLATE_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
+
 import pandas as pd
 from phoenix.client.types import PromptVersion
 from phoenix.evals.models import OpenAIModel
@@ -171,7 +174,6 @@ class PromptLearningOptimizer:
             raise ValueError("Prompt must be either a PromptVersion object, list of messages, or string")
 
     def _detect_template_variables(self, prompt_content: str) -> list[str]:
-        _TEMPLATE_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
         """Return unique {placeholders} that look like template vars."""
         return list({m.group(1) for m in _TEMPLATE_RE.finditer(prompt_content)})
 

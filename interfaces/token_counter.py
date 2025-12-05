@@ -42,16 +42,21 @@ class TiktokenCounter(TokenCounter):
     
     def count_dataframe_tokens(self, df: pd.DataFrame, columns: List[str]) -> List[int]:
         """Count tokens for specified columns in dataframe."""
-        token_counts = []
+        # Vectorized approach - much faster than iterrows()
+        valid_columns = [col for col in columns if col in df.columns]
         
-        for _, row in df.iterrows():
-            total_tokens = 0
-            for col in columns:
-                if col in row:
-                    total_tokens += self.count_tokens(row[col])
-            token_counts.append(total_tokens)
+        if not valid_columns:
+            return [0] * len(df)
         
-        return token_counts
+        # Process each column and sum tokens per row
+        token_counts = pd.Series([0] * len(df), dtype=int)
+        
+        for col in valid_columns:
+            # Vectorized token counting for the entire column
+            col_tokens = df[col].fillna('').astype(str).apply(self.count_tokens)
+            token_counts += col_tokens
+        
+        return token_counts.tolist()
     
     def estimate_tokens(self, text: str) -> int:
         """For tiktoken, exact count is fast enough."""
@@ -69,16 +74,22 @@ class ApproximateCounter(TokenCounter):
     
     def count_dataframe_tokens(self, df: pd.DataFrame, columns: List[str]) -> List[int]:
         """Count approximate tokens for dataframe columns."""
-        token_counts = []
+        # Vectorized approach using numpy for maximum speed
+        valid_columns = [col for col in columns if col in df.columns]
         
-        for _, row in df.iterrows():
-            total_chars = 0
-            for col in columns:
-                if col in row:
-                    total_chars += len(str(row[col]))
-            token_counts.append(total_chars // 4)
+        if not valid_columns:
+            return [0] * len(df)
         
-        return token_counts
+        # Convert columns to string lengths in a vectorized way
+        total_chars = pd.Series([0] * len(df), dtype=int)
+        
+        for col in valid_columns:
+            # Vectorized string length calculation
+            char_counts = df[col].fillna('').astype(str).str.len()
+            total_chars += char_counts
+        
+        # Convert to tokens (chars/4) and return as list
+        return (total_chars // 4).tolist()
     
     def estimate_tokens(self, text: str) -> int:
         """Same as count_tokens for approximate counter."""
