@@ -49,10 +49,13 @@ class TiktokenSplitter:
             model = "gpt-4o"
         if model.startswith("gpt-4.1"):
             model = "gpt-4"
+        # Only validate OpenAI models, allow other providers to pass through
         if model not in SUPPORTED_MODELS:
-            raise ValueError(f"Model {model} not supported. Supported models: {SUPPORTED_MODELS}")
-
-        self.tiktoken_encoder = tiktoken.encoding_for_model(model)
+            # For non-OpenAI models, use a fallback encoder
+            print(f"Warning: Using fallback token counting for model {model}")
+            self.tiktoken_encoder = tiktoken.encoding_for_model("gpt-4")  # fallback
+        else:
+            self.tiktoken_encoder = tiktoken.encoding_for_model(model)
 
     def _count_tokens(self, text: str) -> int:
         """Count tokens in text using tiktoken."""
@@ -62,7 +65,9 @@ class TiktokenSplitter:
         text_str = str(text)
         return len(self.tiktoken_encoder.encode(text_str))
 
-    def _count_row_tokens(self, df: pd.DataFrame, columns: List[str], row_idx: int) -> int:
+    def _count_row_tokens(
+        self, df: pd.DataFrame, columns: List[str], row_idx: int
+    ) -> int:
         """Count total tokens for a specific row across selected columns."""
         row = df.iloc[row_idx]
         total_tokens = 0
@@ -125,7 +130,9 @@ class TiktokenSplitter:
 
         return batches
 
-    def get_batch_dataframes(self, df: pd.DataFrame, columns: List[str], context_size_tokens: int) -> List[pd.DataFrame]:
+    def get_batch_dataframes(
+        self, df: pd.DataFrame, columns: List[str], context_size_tokens: int
+    ) -> List[pd.DataFrame]:
         """
         Get list of dataframe batches that fit within context window.
 

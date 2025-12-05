@@ -2,15 +2,22 @@ import copy
 import re
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
+# Compile regex pattern once at module level for performance
+_TEMPLATE_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
+
 import pandas as pd
 from phoenix.client.types import PromptVersion
 from phoenix.evals.models import OpenAIModel
 
 from .meta_prompt import MetaPrompt
-from .tiktoken_splitter import TiktokenSplitter
+from core.dataset_splitter import DatasetSplitter
+from core.exceptions import DatasetError, OptimizationError, ProviderError
+from interfaces.token_counter import TiktokenCounter, ApproximateCounter
+from config.settings import settings
 from .utils import get_key_value
 from .annotator import Annotator
 from openai import OpenAI
+
 
 class PromptLearningOptimizer:
     """
@@ -77,18 +84,40 @@ class PromptLearningOptimizer:
         openai_api_key: Optional[str] = None,
         meta_prompt: Optional[str] = None,
         rules_meta_prompt: Optional[str] = None,
+        provider=None,
+        token_counter=None,
+        verbose: bool = False,
+        pricing_calculator=None,
+        budget_limit: float = 5.0,
     ):
         self.prompt = prompt
         self.model_choice = model_choice
-        self.openai_api_key = get_key_value("OPENAI_API_KEY", openai_api_key)
+        self.provider = provider
+        self.verbose = verbose
+        self.pricing_calculator = pricing_calculator
+        self.budget_limit = budget_limit
+
+        # Initialize token counter with smart defaults
+        if token_counter:
+            self.token_counter = token_counter
+        elif provider:
+            # For non-OpenAI providers, use approximate counting
+            self.token_counter = ApproximateCounter()
+        else:
+            # For OpenAI, use tiktoken
+            self.token_counter = TiktokenCounter()
+
+        # Only initialize OpenAI key if no provider is given
+        if not self.provider:
+            self.openai_api_key = get_key_value("OPENAI_API_KEY", openai_api_key)
 
         # Initialize components
         # Only pass arguments if they're not None to allow MetaPrompt defaults to be used
         meta_prompt_kwargs = {}
         if meta_prompt is not None:
-            meta_prompt_kwargs['meta_prompt'] = meta_prompt
+            meta_prompt_kwargs["meta_prompt"] = meta_prompt
         if rules_meta_prompt is not None:
-            meta_prompt_kwargs['rules_meta_prompt'] = rules_meta_prompt
+            meta_prompt_kwargs["rules_meta_prompt"] = rules_meta_prompt
         self.meta_prompter = MetaPrompt(**meta_prompt_kwargs)
 
     def _load_dataset(self, dataset: Union[pd.DataFrame, str]) -> pd.DataFrame:
@@ -100,7 +129,7 @@ class PromptLearningOptimizer:
             try:
                 return pd.read_json(dataset)
             except Exception as e:
-                raise ValueError(f"Failed to load dataset from {dataset}: {e}")
+                raise DatasetError(f"Failed to load dataset from {dataset}: {e}")
 
     def _validate_inputs(
         self,
@@ -113,20 +142,25 @@ class PromptLearningOptimizer:
         """Validate that we have the necessary inputs for optimization"""
         # Check if we have either feedback columns or evaluators
         if not feedback_columns and not evaluators:
-            raise ValueError("Either feedback_columns or evaluators must be provided. " "Need some feedback for MetaPrompt optimization.")
+            raise DatasetError(
+                "Either feedback_columns or evaluators must be provided. "
+                "Need some feedback for MetaPrompt optimization."
+            )
 
         # Validate dataset has required columns
         required_columns = []
         if output_required:
             if output_column is None:
-                raise ValueError("output_column must be provided")
+                raise DatasetError("output_column must be provided")
             required_columns.append(output_column)
         if feedback_columns:
             required_columns.extend(feedback_columns)
 
-        missing_columns = [col for col in required_columns if col not in dataset.columns]
+        missing_columns = [
+            col for col in required_columns if col not in dataset.columns
+        ]
         if missing_columns:
-            raise ValueError(f"Dataset missing required columns: {missing_columns}")
+            raise DatasetError(f"Dataset missing required columns: {missing_columns}")
 
     def _extract_system_prompt(self) -> str:
         """Extract system prompt from prompt object or list"""
@@ -134,25 +168,26 @@ class PromptLearningOptimizer:
             # Extract messages from PromptVersion template
             template = self.prompt._template
             if template["type"] == "chat":
-                messages = template["messages"] # type: ignore
+                messages = template["messages"]  # type: ignore
             else:
                 raise ValueError("Only chat templates are supported")
             for message in messages:
                 if message["role"] == "system":
-                    return message["content"] # type: ignore
+                    return message["content"]  # type: ignore
             raise ValueError("No system prompt found in the prompt")
         elif isinstance(self.prompt, list):
-            for message in self.prompt: # type: ignore
+            for message in self.prompt:  # type: ignore
                 if message["role"] == "system":
-                    return message["content"] # type: ignore
+                    return message["content"]  # type: ignore
             raise ValueError("No system prompt found in the prompt")
         elif isinstance(self.prompt, str):
             return self.prompt
         else:
-            raise ValueError("Prompt must be either a PromptVersion object, list of messages, or string")
+            raise ValueError(
+                "Prompt must be either a PromptVersion object, list of messages, or string"
+            )
 
     def _detect_template_variables(self, prompt_content: str) -> list[str]:
-        _TEMPLATE_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
         """Return unique {placeholders} that look like template vars."""
         return list({m.group(1) for m in _TEMPLATE_RE.finditer(prompt_content)})
 
@@ -171,22 +206,24 @@ class PromptLearningOptimizer:
         dataset = self._load_dataset(dataset)
         self._validate_inputs(dataset, feedback_columns, evaluators)
 
-        print(f"🔍 Running {len(evaluators)} evaluator(s)...")
+        if self.verbose:
+            print(f"Running {len(evaluators)} evaluator(s)...")
         for i, evaluator in enumerate(evaluators):
             try:
                 feedback_data, column_names = evaluator(dataset)
                 for column_name in column_names:
                     dataset[column_name] = feedback_data[column_name]
                     feedback_columns.append(column_name)
-                print(f"   ✅ Evaluator {i + 1}: {column_name}")
+                if self.verbose:
+                    print(f"Evaluator {i + 1}: {column_name}")
             except Exception as e:
-                print(f"   ⚠️  Evaluator {i + 1} failed: {e}")
+                print(f"Evaluator {i + 1} failed: {e}")
 
         return dataset, feedback_columns
-    
+
     def create_annotation(
         self,
-        prompt: str, 
+        prompt: str,
         template_variables: List[str],
         dataset: Union[pd.DataFrame, str],
         feedback_columns: List[str],
@@ -200,17 +237,24 @@ class PromptLearningOptimizer:
         dataset = self._load_dataset(dataset)
         self._validate_inputs(dataset, feedback_columns)
         annotations = []
-        print(f"🔍 Running annotator...")
+        if self.verbose:
+            print(f"Running annotator...")
         for i, annotator_prompt in enumerate(annotator_prompts):
             try:
                 annotator = Annotator(annotator_prompt)
-                prompt = annotator.construct_content(dataset, prompt, template_variables, feedback_columns, output_column, ground_truth_column)
+                prompt = annotator.construct_content(
+                    dataset,
+                    prompt,
+                    template_variables,
+                    feedback_columns,
+                    output_column,
+                    ground_truth_column,
+                )
                 annotation = annotator.generate_annotation(prompt)
                 annotations.append(annotation)
             except Exception as e:
-                print(f"   ⚠️  Annotator {i + 1} failed: {e}")
+                print(f"Annotator {i + 1} failed: {e}")
         return annotations
-
 
     def optimize(
         self,
@@ -236,30 +280,36 @@ class PromptLearningOptimizer:
             Optimized prompt in the same format as the input prompt
         """
         # Run evaluators if provided
-        
+
         dataset = self._load_dataset(dataset)
-        self._validate_inputs(dataset, feedback_columns, evaluators, output_column, output_required=True)
+        self._validate_inputs(
+            dataset, feedback_columns, evaluators, output_column, output_required=True
+        )
         if evaluators:
-            dataset, feedback_columns = self.run_evaluators(dataset, evaluators, feedback_columns)
-        
+            dataset, feedback_columns = self.run_evaluators(
+                dataset, evaluators, feedback_columns
+            )
+
         # Extract prompt content
         prompt_content = self._extract_system_prompt()
         # Auto-detect template variables
         self.template_variables = self._detect_template_variables(prompt_content)
 
-        # Initialize tiktoken splitter
-        splitter = TiktokenSplitter(model=self.model_choice)
+        # Initialize dataset splitter with token counter
+        splitter = DatasetSplitter(self.token_counter)
 
         # Determine which columns to include in token counting
-        # columns_to_count = self.template_variables + self.feedback_columns + [self.output_column]
         columns_to_count = list(dataset.columns)
-        print(columns_to_count)
+        if self.verbose:
+            print(f"Columns to count: {columns_to_count}")
 
         # Create batches based on token count
         context_size_tokens = context_size_k
-        batch_dataframes = splitter.get_batch_dataframes(dataset, columns_to_count, context_size_tokens)
+        batch_dataframes = splitter.split_into_batches(
+            dataset, columns_to_count, context_size_tokens
+        )
 
-        print(f"📊 Processing {len(dataset)} examples in {len(batch_dataframes)} batches")
+        print(f"Processing {len(dataset)} examples in {len(batch_dataframes)} batches")
 
         # Process dataset in batches
         optimized_prompt_content = prompt_content
@@ -278,25 +328,84 @@ class PromptLearningOptimizer:
                     ruleset=ruleset,
                 )
 
-                openai_client = OpenAI(api_key=self.openai_api_key.get_secret_value())
-                output_response = openai_client.chat.completions.create(
-                    model=self.model_choice,
-                    messages=[{"role": "user", "content": meta_prompt_content}],
-                )
+                # Check budget before making API call
+                if self.pricing_calculator:
+                    # Estimate tokens for this batch
+                    input_tokens = len(meta_prompt_content) // 4  # Rough estimate
+                    output_tokens = 1000  # Conservative estimate for response
 
-                response = output_response.choices[0].message.content
-                response_text = response or ""
+                    if self.pricing_calculator.would_exceed_budget(
+                        self.model_choice,
+                        input_tokens,
+                        output_tokens,
+                        self.budget_limit,
+                    ):
+                        print(
+                            f"Budget limit of ${self.budget_limit:.2f} would be exceeded. Stopping optimization."
+                        )
+                        print(
+                            f"Current cost: ${self.pricing_calculator.get_total_cost():.4f}"
+                        )
+                        break
+
+                # Use provider if available, otherwise fall back to OpenAI
+                if self.provider:
+                    # Use the provider's generate method
+                    import asyncio
+
+                    try:
+                        response_text = asyncio.run(
+                            self.provider.generate_text(
+                                messages=[
+                                    {"role": "user", "content": meta_prompt_content}
+                                ],
+                                model=self.model_choice,
+                            )
+                        )
+                    except Exception as e:
+                        raise ProviderError(
+                            f"Provider {self.provider.__class__.__name__} failed: {e}"
+                        )
+                else:
+                    # Fall back to OpenAI
+                    try:
+                        openai_client = OpenAI(
+                            api_key=self.openai_api_key.get_secret_value()
+                        )
+                        output_response = openai_client.chat.completions.create(
+                            model=self.model_choice,
+                            messages=[{"role": "user", "content": meta_prompt_content}],
+                        )
+                        response_text = output_response.choices[0].message.content or ""
+                    except Exception as e:
+                        raise ProviderError(f"OpenAI provider failed: {e}")
+
+                # Track costs if pricing calculator is available
+                if self.pricing_calculator:
+                    input_tokens = len(meta_prompt_content) // 4  # Rough estimate
+                    output_tokens = len(response_text) // 4  # Rough estimate
+                    cost = self.pricing_calculator.add_usage(
+                        self.model_choice, input_tokens, output_tokens
+                    )
+                    if self.verbose:
+                        print(
+                            f"Batch {i + 1} cost: ${cost:.4f} (Total: ${self.pricing_calculator.get_total_cost():.4f})"
+                        )
 
                 if ruleset:
                     ruleset = response_text
                 else:
                     potential_new_prompt = response_text
                     # Validate that new prompt has same template variables
-                    print(f"   ✅ Batch {i + 1}/{len(batch_dataframes)}: Optimized")
+                    if self.verbose:
+                        print(f"Batch {i + 1}/{len(batch_dataframes)}: Optimized")
                     optimized_prompt_content = potential_new_prompt
 
+            except (ProviderError, OptimizationError) as e:
+                print(f"Batch {i + 1}/{len(batch_dataframes)}: Failed - {e}")
+                continue
             except Exception as e:
-                print(f"   ❌ Batch {i + 1}/{len(batch_dataframes)}: Failed - {e}")
+                print(f"Batch {i + 1}/{len(batch_dataframes)}: Unexpected error - {e}")
                 continue
 
         if ruleset:
@@ -304,7 +413,9 @@ class PromptLearningOptimizer:
         optimized_prompt = self._create_optimized_prompt(optimized_prompt_content)
         return optimized_prompt
 
-    def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, Sequence, str]:
+    def _create_optimized_prompt(
+        self, optimized_content: str
+    ) -> Union[PromptVersion, Sequence, str]:
         """Create optimized prompt in the same format as input"""
 
         if isinstance(self.prompt, PromptVersion):
@@ -324,7 +435,7 @@ class PromptLearningOptimizer:
             )
 
         elif isinstance(self.prompt, list):
-            optimized_messages = copy.deepcopy(self.prompt) # type: ignore
+            optimized_messages = copy.deepcopy(self.prompt)  # type: ignore
 
             for i, message in enumerate(optimized_messages):
                 if message["role"] == "system":
@@ -337,4 +448,6 @@ class PromptLearningOptimizer:
             return optimized_content
 
         else:
-            raise ValueError("Prompt must be either a PromptVersion object or list of messages or string")
+            raise ValueError(
+                "Prompt must be either a PromptVersion object or list of messages or string"
+            )

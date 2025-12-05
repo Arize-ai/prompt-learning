@@ -74,9 +74,13 @@ EXAMPLES_PLACEHOLDER = "{examples}"
 
 # Example formatting constants
 EXAMPLE_HEADER = "Example {index}"
-ORIGINAL_TEMPLATE_LABEL = "Original Template With Variables from the Baseline Prompt Populated:"
+ORIGINAL_TEMPLATE_LABEL = (
+    "Original Template With Variables from the Baseline Prompt Populated:"
+)
 OUTPUT_LABEL = "Output from the LLM using the template above:"
-FEEDBACK_LABEL = "Feedback from the evaluator using the template above and the output above:"
+FEEDBACK_LABEL = (
+    "Feedback from the evaluator using the template above and the output above:"
+)
 
 CLAUDE_CODE_PROMPT = """
 # System Prompt

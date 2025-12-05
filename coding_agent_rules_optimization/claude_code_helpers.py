@@ -22,12 +22,12 @@ def run_claude_for_instance(
 ) -> dict:
     """
     Run Claude Code CLI in act mode for a single SWE-bench instance.
-    
+
     1) Materialize repo from image to host workspace (if empty)
     2) Start container with bind mount of workspace
     3) Run Claude Code CLI with the task
     4) Export patch from workspace
-    
+
     Args:
         instance_id: The SWE-bench instance ID
         image_tag: Docker image tag for the instance
@@ -35,7 +35,7 @@ def run_claude_for_instance(
         task_text: The problem statement to solve
         wait_seconds: Max seconds to wait (passed as --max-turns equivalent)
         ruleset_text: Optional ruleset to append to system prompt
-        
+
     Returns:
         dict with task results including predictions_path
     """
@@ -43,35 +43,37 @@ def run_claude_for_instance(
     workspace.mkdir(parents=True, exist_ok=True)
     materialize_repo_from_image(image_tag, workspace)
     ensure_git_baseline(workspace)
-    
+
     # Step 2: Start bound container
     stop_container(instance_id)
     start_bound_container(image_tag, instance_id, workspace)
-    
+
     try:
         # Step 3: Run Claude Code CLI
         cmd = [
             "claude",
             "-p",  # Print mode (non-interactive)
-            "--output-format", "text",
+            "--output-format",
+            "text",
             "--dangerously-skip-permissions",  # Skip permission prompts
             # No --max-turns: let Claude run until done (timeout acts as safety valve)
-            "--model", model_name,
+            "--model",
+            model_name,
         ]
-        
+
         # Add ruleset if provided
         if ruleset_text:
             cmd.extend(["--append-system-prompt", ruleset_text])
-        
+
         # Add the task text as the query
         cmd.append(task_text)
-        
+
         # Debug: Print command
         print(f"\n[DEBUG {instance_id}] Running command:")
         print(f"  {' '.join(cmd[:8])}... (task text truncated)")
         print(f"  CWD: {workspace}")
         print(f"  Timeout: {wait_seconds}s")
-        
+
         # Run Claude Code in the workspace directory
         result = subprocess.run(
             cmd,
@@ -81,7 +83,7 @@ def run_claude_for_instance(
             timeout=wait_seconds,
             env=os.environ.copy(),
         )
-        
+
         # Debug: Print result
         print(f"[DEBUG {instance_id}] Command completed:")
         print(f"  Exit code: {result.returncode}")
@@ -91,19 +93,19 @@ def run_claude_for_instance(
             print(f"  Stderr preview: {result.stderr[:500]}")
         if result.stdout:
             print(f"  Stdout preview: {result.stdout[:500]}")
-        
+
         # Step 4: Export patch from workspace
         preds_path = export_patch_from_workspace(
             instance_id=instance_id,
             workspace=workspace,
             model_name_or_path="claude-code",
         )
-        
+
         print(f"[DEBUG {instance_id}] Patch exported to: {preds_path}")
         if preds_path.exists():
             patch_size = preds_path.stat().st_size
             print(f"[DEBUG {instance_id}] Patch size: {patch_size} bytes")
-        
+
         return {
             "instance_id": instance_id,
             "predictions_path": str(preds_path),
@@ -113,7 +115,7 @@ def run_claude_for_instance(
             "stderr": result.stderr,
             "returncode": result.returncode,
         }
-        
+
     except subprocess.TimeoutExpired:
         # Still try to export whatever changes were made
         preds_path = export_patch_from_workspace(
@@ -136,4 +138,3 @@ def run_claude_for_instance(
             "workspace": str(workspace),
             "error": str(e),
         }
-

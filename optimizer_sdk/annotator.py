@@ -21,27 +21,29 @@ class Annotator:
     ) -> str:
         """
         Generate annotations based on the evaluation results.
-        
+
         Args:
             batch_df: DataFrame containing the evaluation data
             baseline_prompt: The original prompt that was evaluated
             template_variables: List of template variable names
             feedback_columns: List of feedback column names
             output_column: Name of the output column
-            
+
         Returns:
             Formatted prompt string for annotation generation
         """
         content = self.annotations_prompt_template
         content = content.replace("{baseline prompt}", baseline_prompt)
-        
+
         examples = ""
         # Iterate over the batch of data and populate the template with actual values
         for ind, row in batch_df.iterrows():
             row_dict = row.to_dict()
             output_value = row_dict[output_column]
             if output_value is not None and isinstance(output_value, str):
-                output_value = output_value.replace(START_DELIM, " ").replace(END_DELIM, " ")
+                output_value = output_value.replace(START_DELIM, " ").replace(
+                    END_DELIM, " "
+                )
             else:
                 output_value = "None"
             if ground_truth_column is not None:
@@ -65,15 +67,17 @@ class Annotator:
                 if feedback_value is not None:
                     # Cast to string to handle integers and other types
                     feedback_value = str(feedback_value)
-                    feedback_value = feedback_value.replace(START_DELIM, " ").replace(END_DELIM, " ")
+                    feedback_value = feedback_value.replace(START_DELIM, " ").replace(
+                        END_DELIM, " "
+                    )
                 else:
                     feedback_value = "None"
                 current_example += f"\n{feedback_column}: {feedback_value}"
             examples += current_example
-            
+
         content = content.replace("{examples}", examples)
-        return content 
-    
+        return content
+
     def generate_annotation(
         self,
         prompt: str,
@@ -83,8 +87,6 @@ class Annotator:
             model="gpt-4o",
             messages=[
                 {"role": "user", "content": prompt},
-            ]
+            ],
         )
         return response.choices[0].message.content
-
-        

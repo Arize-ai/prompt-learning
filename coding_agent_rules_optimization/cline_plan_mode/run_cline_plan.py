@@ -1,10 +1,12 @@
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from constants import CLINE_REPO_PATH, MATERIALIZED_REPOS_PATH
 from cline_helpers import run_cline_for_instance
 from pathlib import Path
+
 
 def run_cline(instance: dict, idx: int, ruleset_text: str) -> dict:
     instance_id = instance["instance_id"]
@@ -36,7 +38,7 @@ def run_cline(instance: dict, idx: int, ruleset_text: str) -> dict:
         ruleset_text=ruleset_text,
     )
 
-    result["final_plan"] = out.get("final_plan", "") 
+    result["final_plan"] = out.get("final_plan", "")
     print(f"[{result['instance_id']}] CLINE done")
 
     return result
