@@ -7,6 +7,7 @@ import pandas as pd
 
 from optimizer_sdk.prompt_learning_optimizer import PromptLearningOptimizer
 from providers.google_provider import GoogleProvider
+from core.exceptions import DatasetError, ProviderError, OptimizationError
 
 @click.command()
 @click.option(
@@ -82,8 +83,11 @@ def optimize(prompt, dataset, output_column, feedback_columns, model, provider, 
         print(f"Loaded {len(df)} examples")
         print(f"Dataset columns: {list(df.columns)}")
         
+    except (DatasetError, FileNotFoundError, pd.errors.EmptyDataError) as e:
+        print(f"❌ Dataset error: {e}")
+        return
     except Exception as e:
-        print(f"Error loading dataset: {e}")
+        print(f"❌ Unexpected error loading dataset: {e}")
         return
     
     # Initialize optimizer
@@ -101,15 +105,18 @@ def optimize(prompt, dataset, output_column, feedback_columns, model, provider, 
             provider=provider_instance
         )
         
-        print("Optimizer initialized")
+        print("✅ Optimizer initialized")
         
+    except (ProviderError, ValueError) as e:
+        print(f"❌ Provider error: {e}")
+        return
     except Exception as e:
-        print(f"Error initializing optimizer: {e}")
+        print(f"❌ Unexpected error initializing optimizer: {e}")
         return
     
     # Run optimization
     try:
-        print("Running optimization...")
+        print("🚀 Running optimization...")
         
         optimized_prompt = optimizer.optimize(
             dataset=df,
@@ -118,7 +125,7 @@ def optimize(prompt, dataset, output_column, feedback_columns, model, provider, 
             context_size_k=context_size
         )
         
-        print("Optimization complete!")
+        print("✅ Optimization complete!")
         
         # Display results
         print("\nOriginal Prompt:")
@@ -133,8 +140,11 @@ def optimize(prompt, dataset, output_column, feedback_columns, model, provider, 
         if save:
             with open(save, 'w') as f:
                 f.write(str(optimized_prompt))
-            print(f"Saved optimized prompt to {save}")
+            print(f"💾 Saved optimized prompt to {save}")
             
+    except (DatasetError, OptimizationError, ProviderError) as e:
+        print(f"❌ Optimization error: {e}")
+        return
     except Exception as e:
-        print(f"Error during optimization: {e}")
+        print(f"❌ Unexpected error during optimization: {e}")
         return
