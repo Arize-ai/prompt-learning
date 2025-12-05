@@ -7,9 +7,9 @@ from typing import List, Dict, Any, Optional
 from google import genai
 from google.genai import types
 
-from .base_provider import BaseProvider
+from .base_provider import ModelProvider, ModelCapabilities
 
-class GoogleProvider(BaseProvider):
+class GoogleProvider(ModelProvider):
     """Google AI provider using Gemini models with grounding."""
     
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -25,12 +25,37 @@ class GoogleProvider(BaseProvider):
         # Default model
         self.default_model = kwargs.get("model", "gemini-2.5-flash")
         
-    @property
-    def supported_models(self) -> List[str]:
-        """Let Google's library handle model validation."""
-        return []  # Will let genai library validate models
+        # Model capabilities mapping
+        self._model_capabilities = {
+            "gemini-2.5-flash": ModelCapabilities(
+                supports_text=True,
+                supports_images=False,
+                supports_grounding=True,
+                max_tokens=128000
+            ),
+            "gemini-2.5-pro": ModelCapabilities(
+                supports_text=True,
+                supports_images=False, 
+                supports_grounding=True,
+                max_tokens=128000
+            ),
+            "gemini-2.5-flash-image": ModelCapabilities(
+                supports_text=True,
+                supports_images=True,
+                supports_grounding=False,
+                max_tokens=128000
+            )
+        }
     
-    async def generate(self, messages: List[Dict[str, str]], model: Optional[str] = None, **kwargs) -> str:
+    def list_available_models(self) -> List[str]:
+        """List available Gemini models."""
+        return list(self._model_capabilities.keys())
+    
+    def get_model_capabilities(self, model: str) -> ModelCapabilities:
+        """Get capabilities for a Gemini model."""
+        return self._model_capabilities.get(model, ModelCapabilities())
+    
+    async def generate_text(self, messages: List[Dict[str, str]], model: str, **kwargs) -> str:
         """Generate response using Gemini."""
         
         model_name = model or self.default_model
@@ -46,7 +71,7 @@ class GoogleProvider(BaseProvider):
         
         return response.text
     
-    async def generate_with_grounding(self, messages: List[Dict[str, str]], query: str, model: Optional[str] = None, **kwargs) -> str:
+    async def generate_with_grounding(self, messages: List[Dict[str, str]], model: str, **kwargs) -> str:
         """Generate response with Google Search grounding."""
         
         model_name = model or self.default_model
