@@ -52,14 +52,21 @@ def image(prompt, provider, iterations, output_dir, evaluate):
     print(f"Iterations: {iterations}")
     
     # Create output directory if specified
-    if output_dir:
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-        print(f"Output directory: {output_path}")
-    else:
-        output_path = Path("./image_outputs")
-        output_path.mkdir(exist_ok=True)
-        print(f"Using default output directory: {output_path}")
+    try:
+        if output_dir:
+            output_path = Path(output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+            print(f"Output directory: {output_path}")
+        else:
+            output_path = Path("./image_outputs")
+            output_path.mkdir(exist_ok=True)
+            print(f"Using default output directory: {output_path}")
+    except PermissionError:
+        print(f"Permission denied: Cannot create directory {output_dir or './image_outputs'}")
+        return
+    except Exception as e:
+        print(f"Error creating output directory: {e}")
+        return
     
     # Initialize provider
     try:

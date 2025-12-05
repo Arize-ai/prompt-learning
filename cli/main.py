@@ -40,11 +40,17 @@ def cli(ctx, verbose):
             --prompt "A futuristic cityscape at sunset" \\
             --iterations 3 \\
             --evaluate
+            
+        # Run with verbose output
+        prompt-learn --verbose optimize -p "Your prompt" -d data.csv -f feedback
     
     Environment Variables:
         OPENAI_API_KEY     - OpenAI API key for GPT models
         GOOGLE_API_KEY     - Google AI API key for Gemini models  
         GEMINI_API_KEY     - Alternative Google AI API key
+        
+    Documentation:
+        Visit https://github.com/Arize-ai/prompt-learning for full documentation
     """
     # Store verbose flag in context for commands to access
     ctx.ensure_object(dict)
