@@ -77,10 +77,15 @@ class PromptLearningOptimizer:
         openai_api_key: Optional[str] = None,
         meta_prompt: Optional[str] = None,
         rules_meta_prompt: Optional[str] = None,
+        provider = None,
     ):
         self.prompt = prompt
         self.model_choice = model_choice
-        self.openai_api_key = get_key_value("OPENAI_API_KEY", openai_api_key)
+        self.provider = provider
+        
+        # Only initialize OpenAI key if no provider is given
+        if not self.provider:
+            self.openai_api_key = get_key_value("OPENAI_API_KEY", openai_api_key)
 
         # Initialize components
         # Only pass arguments if they're not None to allow MetaPrompt defaults to be used
@@ -278,14 +283,22 @@ class PromptLearningOptimizer:
                     ruleset=ruleset,
                 )
 
-                openai_client = OpenAI(api_key=self.openai_api_key.get_secret_value())
-                output_response = openai_client.chat.completions.create(
-                    model=self.model_choice,
-                    messages=[{"role": "user", "content": meta_prompt_content}],
-                )
-
-                response = output_response.choices[0].message.content
-                response_text = response or ""
+                # Use provider if available, otherwise fall back to OpenAI
+                if self.provider:
+                    # Use the provider's generate method
+                    import asyncio
+                    response_text = asyncio.run(self.provider.generate(
+                        messages=[{"role": "user", "content": meta_prompt_content}],
+                        model=self.model_choice
+                    ))
+                else:
+                    # Fall back to OpenAI
+                    openai_client = OpenAI(api_key=self.openai_api_key.get_secret_value())
+                    output_response = openai_client.chat.completions.create(
+                        model=self.model_choice,
+                        messages=[{"role": "user", "content": meta_prompt_content}],
+                    )
+                    response_text = output_response.choices[0].message.content or ""
 
                 if ruleset:
                     ruleset = response_text

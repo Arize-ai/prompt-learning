@@ -88,16 +88,17 @@ def optimize(prompt, dataset, output_column, feedback_columns, model, provider, 
     
     # Initialize optimizer
     try:
+        provider_instance = None
+        
         if provider == "google":
             # Use GoogleProvider
-            google_provider = GoogleProvider()
+            provider_instance = GoogleProvider()
             print("✅ Google provider initialized")
-            # TODO: Connect GoogleProvider to PromptLearningOptimizer
-            print("Note: Google provider integration in progress, using existing optimizer for now")
         
         optimizer = PromptLearningOptimizer(
             prompt=prompt,
-            model_choice=model
+            model_choice=model,
+            provider=provider_instance
         )
         
         print("Optimizer initialized")
