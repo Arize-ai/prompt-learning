@@ -23,7 +23,7 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "arize-phoenix-evals",
-    "arize-phoenix-client", 
+    "arize-phoenix-client",
     "tiktoken",
     "openai",
     "arize-toolkit",
@@ -38,6 +38,8 @@ dependencies = [
     "requests",
     "pydantic",
     "httpx",
+    "rich>=14.2.0",
+    "click-spinner>=0.1.10",
 ]
 
 [project.optional-dependencies]

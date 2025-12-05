@@ -85,10 +85,12 @@ class PromptLearningOptimizer:
         rules_meta_prompt: Optional[str] = None,
         provider = None,
         token_counter = None,
+        verbose: bool = False,
     ):
         self.prompt = prompt
         self.model_choice = model_choice
         self.provider = provider
+        self.verbose = verbose
         
         # Initialize token counter with smart defaults
         if token_counter:
@@ -192,16 +194,18 @@ class PromptLearningOptimizer:
         dataset = self._load_dataset(dataset)
         self._validate_inputs(dataset, feedback_columns, evaluators)
 
-        print(f"🔍 Running {len(evaluators)} evaluator(s)...")
+        if self.verbose:
+            print(f"Running {len(evaluators)} evaluator(s)...")
         for i, evaluator in enumerate(evaluators):
             try:
                 feedback_data, column_names = evaluator(dataset)
                 for column_name in column_names:
                     dataset[column_name] = feedback_data[column_name]
                     feedback_columns.append(column_name)
-                print(f"   ✅ Evaluator {i + 1}: {column_name}")
+                if self.verbose:
+                    print(f"Evaluator {i + 1}: {column_name}")
             except Exception as e:
-                print(f"   ⚠️  Evaluator {i + 1} failed: {e}")
+                print(f"Evaluator {i + 1} failed: {e}")
 
         return dataset, feedback_columns
     
@@ -221,7 +225,8 @@ class PromptLearningOptimizer:
         dataset = self._load_dataset(dataset)
         self._validate_inputs(dataset, feedback_columns)
         annotations = []
-        print(f"🔍 Running annotator...")
+        if self.verbose:
+            print(f"Running annotator...")
         for i, annotator_prompt in enumerate(annotator_prompts):
             try:
                 annotator = Annotator(annotator_prompt)
@@ -229,7 +234,7 @@ class PromptLearningOptimizer:
                 annotation = annotator.generate_annotation(prompt)
                 annotations.append(annotation)
             except Exception as e:
-                print(f"   ⚠️  Annotator {i + 1} failed: {e}")
+                print(f"Annotator {i + 1} failed: {e}")
         return annotations
 
 
@@ -273,13 +278,14 @@ class PromptLearningOptimizer:
 
         # Determine which columns to include in token counting
         columns_to_count = list(dataset.columns)
-        print(columns_to_count)
+        if self.verbose:
+            print(f"Columns to count: {columns_to_count}")
 
         # Create batches based on token count
         context_size_tokens = context_size_k
         batch_dataframes = splitter.split_into_batches(dataset, columns_to_count, context_size_tokens)
 
-        print(f"📊 Processing {len(dataset)} examples in {len(batch_dataframes)} batches")
+        print(f"Processing {len(dataset)} examples in {len(batch_dataframes)} batches")
 
         # Process dataset in batches
         optimized_prompt_content = prompt_content
@@ -326,14 +332,15 @@ class PromptLearningOptimizer:
                 else:
                     potential_new_prompt = response_text
                     # Validate that new prompt has same template variables
-                    print(f"   ✅ Batch {i + 1}/{len(batch_dataframes)}: Optimized")
+                    if self.verbose:
+                        print(f"Batch {i + 1}/{len(batch_dataframes)}: Optimized")
                     optimized_prompt_content = potential_new_prompt
 
             except (ProviderError, OptimizationError) as e:
-                print(f"   ❌ Batch {i + 1}/{len(batch_dataframes)}: Failed - {e}")
+                print(f"Batch {i + 1}/{len(batch_dataframes)}: Failed - {e}")
                 continue
             except Exception as e:
-                print(f"   ❌ Batch {i + 1}/{len(batch_dataframes)}: Unexpected error - {e}")
+                print(f"Batch {i + 1}/{len(batch_dataframes)}: Unexpected error - {e}")
                 continue
 
         if ruleset:

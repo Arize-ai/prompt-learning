@@ -105,13 +105,13 @@ def image(prompt, provider, iterations, output_dir, evaluate):
                     f.write(f"What works: {feedback}\n")
                     f.write(f"Improvements: {improvements}\n")
                 
-                print(f"✅ Feedback saved to {feedback_file}")
-                print("💡 Use this feedback to optimize future prompts")
+                print(f"Feedback saved to {feedback_file}")
+                print("Use this feedback to optimize future prompts")
             else:
-                print("🔍 Use --evaluate flag for human-in-the-loop feedback collection")
+                print("Use --evaluate flag for human-in-the-loop feedback collection")
             
         else:
-            print(f"❌ Provider {provider} not supported yet")
+            print(f"Provider {provider} not supported yet")
             
     except Exception as e:
-        print(f"❌ Error during image generation: {e}")
+        print(f"Error during image generation: {e}")

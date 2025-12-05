@@ -60,18 +60,21 @@ from core.exceptions import DatasetError, ProviderError, OptimizationError
     type=click.Path(),
     help="Path to save optimized prompt"
 )
-def optimize(prompt, dataset, output_column, feedback_columns, model, provider, context_size, save):
+@click.pass_context
+def optimize(ctx, prompt, dataset, output_column, feedback_columns, model, provider, context_size, save):
     """
     Optimize a prompt using natural language feedback.
     
     Takes a baseline prompt and dataset with feedback to generate
     an improved version using meta-prompt optimization.
     """
+    verbose = ctx.obj.get('verbose', False) if ctx.obj else False
     
-    print(f"Starting prompt optimization...")
-    print(f"Baseline prompt: {prompt[:100]}...")
-    print(f"Dataset: {dataset}")
-    print(f"Model: {model} ({provider})")
+    print("Starting prompt optimization...")
+    if verbose:
+        print(f"Baseline prompt: {prompt[:100]}...")
+        print(f"Dataset: {dataset}")
+        print(f"Model: {model} ({provider})")
     
     # Load dataset
     try:
@@ -81,13 +84,14 @@ def optimize(prompt, dataset, output_column, feedback_columns, model, provider, 
             df = pd.read_json(dataset)
         
         print(f"Loaded {len(df)} examples")
-        print(f"Dataset columns: {list(df.columns)}")
+        if verbose:
+            print(f"Dataset columns: {list(df.columns)}")
         
     except (DatasetError, FileNotFoundError, pd.errors.EmptyDataError) as e:
-        print(f"❌ Dataset error: {e}")
+        print(f"Dataset error: {e}")
         return
     except Exception as e:
-        print(f"❌ Unexpected error loading dataset: {e}")
+        print(f"Unexpected error loading dataset: {e}")
         return
     
     # Initialize optimizer
@@ -97,26 +101,29 @@ def optimize(prompt, dataset, output_column, feedback_columns, model, provider, 
         if provider == "google":
             # Use GoogleProvider
             provider_instance = GoogleProvider()
-            print("✅ Google provider initialized")
+            if verbose:
+                print("Google provider initialized")
         
         optimizer = PromptLearningOptimizer(
             prompt=prompt,
             model_choice=model,
-            provider=provider_instance
+            provider=provider_instance,
+            verbose=verbose
         )
         
-        print("✅ Optimizer initialized")
+        if verbose:
+            print("Optimizer initialized")
         
     except (ProviderError, ValueError) as e:
-        print(f"❌ Provider error: {e}")
+        print(f"Provider error: {e}")
         return
     except Exception as e:
-        print(f"❌ Unexpected error initializing optimizer: {e}")
+        print(f"Unexpected error initializing optimizer: {e}")
         return
     
     # Run optimization
     try:
-        print("🚀 Running optimization...")
+        print("Running optimization...")
         
         optimized_prompt = optimizer.optimize(
             dataset=df,
@@ -125,7 +132,7 @@ def optimize(prompt, dataset, output_column, feedback_columns, model, provider, 
             context_size_k=context_size
         )
         
-        print("✅ Optimization complete!")
+        print("Optimization complete!")
         
         # Display results
         print("\nOriginal Prompt:")
@@ -140,11 +147,11 @@ def optimize(prompt, dataset, output_column, feedback_columns, model, provider, 
         if save:
             with open(save, 'w') as f:
                 f.write(str(optimized_prompt))
-            print(f"💾 Saved optimized prompt to {save}")
+            print(f"Saved optimized prompt to {save}")
             
     except (DatasetError, OptimizationError, ProviderError) as e:
-        print(f"❌ Optimization error: {e}")
+        print(f"Optimization error: {e}")
         return
     except Exception as e:
-        print(f"❌ Unexpected error during optimization: {e}")
+        print(f"Unexpected error during optimization: {e}")
         return
