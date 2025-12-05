@@ -8,6 +8,7 @@ from phoenix.evals.models import OpenAIModel
 
 from .meta_prompt import MetaPrompt
 from core.dataset_splitter import DatasetSplitter
+from core.exceptions import DatasetError, OptimizationError, ProviderError
 from interfaces.token_counter import TiktokenCounter, ApproximateCounter
 from config.settings import settings
 from .utils import get_key_value
@@ -118,7 +119,7 @@ class PromptLearningOptimizer:
             try:
                 return pd.read_json(dataset)
             except Exception as e:
-                raise ValueError(f"Failed to load dataset from {dataset}: {e}")
+                raise DatasetError(f"Failed to load dataset from {dataset}: {e}")
 
     def _validate_inputs(
         self,
@@ -131,20 +132,20 @@ class PromptLearningOptimizer:
         """Validate that we have the necessary inputs for optimization"""
         # Check if we have either feedback columns or evaluators
         if not feedback_columns and not evaluators:
-            raise ValueError("Either feedback_columns or evaluators must be provided. " "Need some feedback for MetaPrompt optimization.")
+            raise DatasetError("Either feedback_columns or evaluators must be provided. " "Need some feedback for MetaPrompt optimization.")
 
         # Validate dataset has required columns
         required_columns = []
         if output_required:
             if output_column is None:
-                raise ValueError("output_column must be provided")
+                raise DatasetError("output_column must be provided")
             required_columns.append(output_column)
         if feedback_columns:
             required_columns.extend(feedback_columns)
 
         missing_columns = [col for col in required_columns if col not in dataset.columns]
         if missing_columns:
-            raise ValueError(f"Dataset missing required columns: {missing_columns}")
+            raise DatasetError(f"Dataset missing required columns: {missing_columns}")
 
     def _extract_system_prompt(self) -> str:
         """Extract system prompt from prompt object or list"""
@@ -299,18 +300,24 @@ class PromptLearningOptimizer:
                 if self.provider:
                     # Use the provider's generate method
                     import asyncio
-                    response_text = asyncio.run(self.provider.generate(
-                        messages=[{"role": "user", "content": meta_prompt_content}],
-                        model=self.model_choice
-                    ))
+                    try:
+                        response_text = asyncio.run(self.provider.generate_text(
+                            messages=[{"role": "user", "content": meta_prompt_content}],
+                            model=self.model_choice
+                        ))
+                    except Exception as e:
+                        raise ProviderError(f"Provider {self.provider.__class__.__name__} failed: {e}")
                 else:
                     # Fall back to OpenAI
-                    openai_client = OpenAI(api_key=self.openai_api_key.get_secret_value())
-                    output_response = openai_client.chat.completions.create(
-                        model=self.model_choice,
-                        messages=[{"role": "user", "content": meta_prompt_content}],
-                    )
-                    response_text = output_response.choices[0].message.content or ""
+                    try:
+                        openai_client = OpenAI(api_key=self.openai_api_key.get_secret_value())
+                        output_response = openai_client.chat.completions.create(
+                            model=self.model_choice,
+                            messages=[{"role": "user", "content": meta_prompt_content}],
+                        )
+                        response_text = output_response.choices[0].message.content or ""
+                    except Exception as e:
+                        raise ProviderError(f"OpenAI provider failed: {e}")
 
                 if ruleset:
                     ruleset = response_text
@@ -320,8 +327,11 @@ class PromptLearningOptimizer:
                     print(f"   ✅ Batch {i + 1}/{len(batch_dataframes)}: Optimized")
                     optimized_prompt_content = potential_new_prompt
 
-            except Exception as e:
+            except (ProviderError, OptimizationError) as e:
                 print(f"   ❌ Batch {i + 1}/{len(batch_dataframes)}: Failed - {e}")
+                continue
+            except Exception as e:
+                print(f"   ❌ Batch {i + 1}/{len(batch_dataframes)}: Unexpected error - {e}")
                 continue
 
         if ruleset:
