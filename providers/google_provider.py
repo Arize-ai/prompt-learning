@@ -89,3 +89,39 @@ class GoogleProvider(BaseProvider):
                 formatted_parts.append(f"Assistant: {content}")
         
         return "\n\n".join(formatted_parts)
+    
+    def generate_image(self, prompt: str, model: str = "gemini-2.5-flash-image", save_path: Optional[str] = None) -> str:
+        """Generate image using Gemini image models (nano banana)."""
+        
+        try:
+            response = self.client.models.generate_content(
+                model=model,
+                contents=prompt
+            )
+            
+            generated_images = []
+            
+            for part in response.parts:
+                if part.text is not None:
+                    print(f"Model response: {part.text}")
+                elif part.inline_data is not None:
+                    image = part.as_image()
+                    
+                    if save_path:
+                        # Generate unique filename if multiple images
+                        if len(generated_images) > 0:
+                            name, ext = save_path.rsplit('.', 1)
+                            unique_path = f"{name}_{len(generated_images)}.{ext}"
+                        else:
+                            unique_path = save_path
+                            
+                        image.save(unique_path)
+                        generated_images.append(unique_path)
+                        print(f"Image saved to: {unique_path}")
+                    else:
+                        generated_images.append(image)
+            
+            return f"Generated {len(generated_images)} image(s)"
+            
+        except Exception as e:
+            return f"Error generating image: {e}"
