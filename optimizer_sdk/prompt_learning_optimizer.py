@@ -7,7 +7,9 @@ from phoenix.client.types import PromptVersion
 from phoenix.evals.models import OpenAIModel
 
 from .meta_prompt import MetaPrompt
-from .tiktoken_splitter import TiktokenSplitter
+from core.dataset_splitter import DatasetSplitter
+from interfaces.token_counter import TiktokenCounter, ApproximateCounter
+from config.settings import settings
 from .utils import get_key_value
 from .annotator import Annotator
 from openai import OpenAI
@@ -78,10 +80,21 @@ class PromptLearningOptimizer:
         meta_prompt: Optional[str] = None,
         rules_meta_prompt: Optional[str] = None,
         provider = None,
+        token_counter = None,
     ):
         self.prompt = prompt
         self.model_choice = model_choice
         self.provider = provider
+        
+        # Initialize token counter with smart defaults
+        if token_counter:
+            self.token_counter = token_counter
+        elif provider:
+            # For non-OpenAI providers, use approximate counting
+            self.token_counter = ApproximateCounter()
+        else:
+            # For OpenAI, use tiktoken
+            self.token_counter = TiktokenCounter()
         
         # Only initialize OpenAI key if no provider is given
         if not self.provider:
@@ -252,17 +265,16 @@ class PromptLearningOptimizer:
         # Auto-detect template variables
         self.template_variables = self._detect_template_variables(prompt_content)
 
-        # Initialize tiktoken splitter
-        splitter = TiktokenSplitter(model=self.model_choice)
+        # Initialize dataset splitter with token counter
+        splitter = DatasetSplitter(self.token_counter)
 
         # Determine which columns to include in token counting
-        # columns_to_count = self.template_variables + self.feedback_columns + [self.output_column]
         columns_to_count = list(dataset.columns)
         print(columns_to_count)
 
         # Create batches based on token count
         context_size_tokens = context_size_k
-        batch_dataframes = splitter.get_batch_dataframes(dataset, columns_to_count, context_size_tokens)
+        batch_dataframes = splitter.split_into_batches(dataset, columns_to_count, context_size_tokens)
 
         print(f"📊 Processing {len(dataset)} examples in {len(batch_dataframes)} batches")
 
