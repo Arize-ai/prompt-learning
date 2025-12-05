@@ -8,6 +8,7 @@ import pandas as pd
 from optimizer_sdk.prompt_learning_optimizer import PromptLearningOptimizer
 from providers.google_provider import GoogleProvider
 from core.exceptions import DatasetError, ProviderError, OptimizationError
+from core.pricing import PricingCalculator
 
 @click.command()
 @click.option(
@@ -60,8 +61,15 @@ from core.exceptions import DatasetError, ProviderError, OptimizationError
     type=click.Path(),
     help="Path to save optimized prompt"
 )
+@click.option(
+    "--budget",
+    "-b",
+    default=5.0,
+    type=float,
+    help="Maximum budget in USD to spend on optimization (default: $5.00)"
+)
 @click.pass_context
-def optimize(ctx, prompt, dataset, output_column, feedback_columns, model, provider, context_size, save):
+def optimize(ctx, prompt, dataset, output_column, feedback_columns, model, provider, context_size, save, budget):
     """
     Optimize a prompt using natural language feedback.
     
@@ -70,7 +78,11 @@ def optimize(ctx, prompt, dataset, output_column, feedback_columns, model, provi
     """
     verbose = ctx.obj.get('verbose', False) if ctx.obj else False
     
+    # Initialize pricing calculator
+    pricing_calculator = PricingCalculator()
+    
     print("Starting prompt optimization...")
+    print(f"Budget limit: ${budget:.2f}")
     if verbose:
         print(f"Baseline prompt: {prompt[:100]}...")
         print(f"Dataset: {dataset}")
@@ -108,7 +120,9 @@ def optimize(ctx, prompt, dataset, output_column, feedback_columns, model, provi
             prompt=prompt,
             model_choice=model,
             provider=provider_instance,
-            verbose=verbose
+            verbose=verbose,
+            pricing_calculator=pricing_calculator,
+            budget_limit=budget
         )
         
         if verbose:
@@ -133,6 +147,14 @@ def optimize(ctx, prompt, dataset, output_column, feedback_columns, model, provi
         )
         
         print("Optimization complete!")
+        
+        # Display cost summary
+        usage = pricing_calculator.get_usage_summary()
+        print(f"\nCost Summary:")
+        print(f"Total cost: ${usage['total_cost']:.4f}")
+        print(f"Total tokens: {usage['total_tokens']:,} ({usage['total_input_tokens']:,} input + {usage['total_output_tokens']:,} output)")
+        if verbose:
+            print(f"Budget remaining: ${budget - usage['total_cost']:.4f}")
         
         # Display results
         print("\nOriginal Prompt:")

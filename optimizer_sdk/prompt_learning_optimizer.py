@@ -86,11 +86,15 @@ class PromptLearningOptimizer:
         provider = None,
         token_counter = None,
         verbose: bool = False,
+        pricing_calculator = None,
+        budget_limit: float = 5.0,
     ):
         self.prompt = prompt
         self.model_choice = model_choice
         self.provider = provider
         self.verbose = verbose
+        self.pricing_calculator = pricing_calculator
+        self.budget_limit = budget_limit
         
         # Initialize token counter with smart defaults
         if token_counter:
@@ -303,6 +307,19 @@ class PromptLearningOptimizer:
                     annotations=annotations,
                     ruleset=ruleset,
                 )
+                
+                # Check budget before making API call
+                if self.pricing_calculator:
+                    # Estimate tokens for this batch
+                    input_tokens = len(meta_prompt_content) // 4  # Rough estimate
+                    output_tokens = 1000  # Conservative estimate for response
+                    
+                    if self.pricing_calculator.would_exceed_budget(
+                        self.model_choice, input_tokens, output_tokens, self.budget_limit
+                    ):
+                        print(f"Budget limit of ${self.budget_limit:.2f} would be exceeded. Stopping optimization.")
+                        print(f"Current cost: ${self.pricing_calculator.get_total_cost():.4f}")
+                        break
 
                 # Use provider if available, otherwise fall back to OpenAI
                 if self.provider:
@@ -326,6 +343,14 @@ class PromptLearningOptimizer:
                         response_text = output_response.choices[0].message.content or ""
                     except Exception as e:
                         raise ProviderError(f"OpenAI provider failed: {e}")
+                
+                # Track costs if pricing calculator is available
+                if self.pricing_calculator:
+                    input_tokens = len(meta_prompt_content) // 4  # Rough estimate
+                    output_tokens = len(response_text) // 4  # Rough estimate  
+                    cost = self.pricing_calculator.add_usage(self.model_choice, input_tokens, output_tokens)
+                    if self.verbose:
+                        print(f"Batch {i + 1} cost: ${cost:.4f} (Total: ${self.pricing_calculator.get_total_cost():.4f})")
 
                 if ruleset:
                     ruleset = response_text

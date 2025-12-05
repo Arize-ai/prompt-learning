@@ -40,7 +40,14 @@ from providers.google_provider import GoogleProvider
     is_flag=True,
     help="Evaluate generated images for prompt optimization"
 )
-def image(prompt, provider, iterations, output_dir, evaluate):
+@click.option(
+    "--budget",
+    "-b", 
+    default=2.0,
+    type=float,
+    help="Maximum budget in USD for image generation (default: $2.00)"
+)
+def image(prompt, provider, iterations, output_dir, evaluate, budget):
     """
     Test image generation prompts with nano banana.
     
@@ -50,6 +57,7 @@ def image(prompt, provider, iterations, output_dir, evaluate):
     print(f"Testing image prompt: {prompt[:100]}...")
     print(f"Provider: {provider}")
     print(f"Iterations: {iterations}")
+    print(f"Budget limit: ${budget:.2f}")
     
     # Create output directory if specified
     try:
