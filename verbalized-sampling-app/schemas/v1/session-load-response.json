@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://verbalized-sampling.app/schemas/v1/session-load-response.json",
+  "title": "Session Load Response",
+  "description": "Response schema for loading saved session",
+  "type": "object",
+  "required": [
+    "session_id",
+    "distributions",
+    "app_version",
+    "created_at"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "Unique session identifier",
+      "format": "uuid"
+    },
+    "distributions": {
+      "type": "array",
+      "description": "Array of loaded distributions",
+      "items": {
+        "type": "object",
+        "required": ["distribution_id", "prompt", "completions", "trace_metadata"],
+        "properties": {
+          "distribution_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "completions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["text", "probability", "rank"],
+              "properties": {
+                "text": { "type": "string" },
+                "probability": { "type": "number" },
+                "rank": { "type": "integer" },
+                "token_probabilities": { "type": "array" }
+              }
+            }
+          },
+          "trace_metadata": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "User notes from session"
+    },
+    "app_version": {
+      "type": "string",
+      "description": "App version that created this session (e.g., '1.0.0')"
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version (e.g., 'v1')",
+      "default": "v1"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Session creation timestamp",
+      "format": "date-time"
+    },
+    "loaded_at": {
+      "type": "string",
+      "description": "Session load timestamp",
+      "format": "date-time"
+    }
+  }
+}

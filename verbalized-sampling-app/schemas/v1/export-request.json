@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://verbalized-sampling.app/schemas/v1/export-request.json",
+  "title": "Export Request",
+  "description": "Request schema for exporting distributions to CSV/JSONL",
+  "type": "object",
+  "required": [
+    "distribution_ids",
+    "format",
+    "output_path"
+  ],
+  "properties": {
+    "distribution_ids": {
+      "type": "array",
+      "description": "Array of distribution UUIDs to export",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "format": {
+      "type": "string",
+      "description": "Export format",
+      "enum": ["csv", "jsonl"]
+    },
+    "include_metadata": {
+      "type": "boolean",
+      "description": "Include trace metadata in export (default: true)",
+      "default": true
+    },
+    "output_path": {
+      "type": "string",
+      "description": "Output file path (absolute or relative)",
+      "minLength": 1
+    }
+  }
+}
