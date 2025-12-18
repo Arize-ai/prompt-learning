@@ -7,7 +7,9 @@ import json
 
 
 dataset_name = "SWE-bench/SWE-bench_Lite"
-combined_preds = "/var/folders/_w/glgvmwgs3s5g81607b0x435c0000gn/T/claude_preds_test_2.jsonl"
+combined_preds = (
+    "/var/folders/_w/glgvmwgs3s5g81607b0x435c0000gn/T/claude_preds_test_2.jsonl"
+)
 print(f"\nRunning SWE-bench evaluator...")
 cmd = [
     sys.executable,
@@ -21,7 +23,8 @@ cmd = [
     str(combined_preds),
     "--run_id",
     "test_2",
-    "--namespace", "none",
+    "--namespace",
+    "none",
     "--max_workers",
     "50",
 ]
@@ -44,10 +47,14 @@ except subprocess.CalledProcessError as e:
 by_id = {inst["instance_id"]: inst for inst in dataset}
 rows: list[dict] = []
 for iid in selected_ids:
-    coding_agent_patch = test_df.loc[test_df['instance_id'] == iid, 'coding_agent_patch'].iloc[0]
+    coding_agent_patch = test_df.loc[
+        test_df["instance_id"] == iid, "coding_agent_patch"
+    ].iloc[0]
 
     # Look for evaluation report (uses namespace)
-    report_path = Path("logs").joinpath("run_evaluation", "test_2", "claude-code", iid, "report.json")
+    report_path = Path("logs").joinpath(
+        "run_evaluation", "test_2", "claude-code", iid, "report.json"
+    )
     pass_or_fail = "fail"
     if report_path.exists():
         try:
@@ -56,16 +63,18 @@ for iid in selected_ids:
             pass_or_fail = "pass" if resolved else "fail"
         except Exception:
             pass_or_fail = "fail"
-    
+
     inst = by_id[iid]
-    rows.append({
-        "instance_id": iid,
-        "problem_statement": inst.get("problem_statement", ""),
-        "ground_truth_patch": inst.get("patch", ""),
-        "test_patch": inst.get("test_patch", ""),
-        "coding_agent_patch": coding_agent_patch,
-        "pass_or_fail": pass_or_fail,
-    })
+    rows.append(
+        {
+            "instance_id": iid,
+            "problem_statement": inst.get("problem_statement", ""),
+            "ground_truth_patch": inst.get("patch", ""),
+            "test_patch": inst.get("test_patch", ""),
+            "coding_agent_patch": coding_agent_patch,
+            "pass_or_fail": pass_or_fail,
+        }
+    )
 
 df = pd.DataFrame(rows)
 

@@ -1,46 +1,104 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
-name = "prompt-learning"
+name = "prompt-learning-enhanced"
 version = "0.1.0"
-description = "A prompt optimization SDK using meta-prompt approaches"
+description = "Enhanced prompt learning SDK with CLI, Google AI integration, pricing controls, and production features"
 readme = "README.md"
-license = "MIT"
-requires-python = ">=3.9"
+license = { file = "LICENSE.txt" }
 authors = [
-    { name = "Priyan Jindal" }
+    { name = "Arize AI", email = "pjindal@arize.com" },
+    { name = "Nouamane Benbrahim", email = "nouamane.benbrahim@protonmail.com" },
+    { name = "Priyan Jindal", email = "priyan.jindal@arize.ai" }
 ]
-keywords = ["prompt", "optimization", "llm", "openai", "machine-learning"]
+keywords = ["prompt-learning", "llm", "optimization", "ai", "cli", "google-ai", "openai", "meta-prompt", "natural-language-feedback"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
 ]
+requires-python = ">=3.12"
 dependencies = [
-    "openai>=1.0.0",
-    "pandas>=1.5.0",
-    "tiktoken>=0.5.0",
-    "pydantic>=2.0.0",
-    "arize-phoenix-evals>=0.10.0",
-    "arize-phoenix-client>=1.0.0",
+    "arize-phoenix-evals",
+    "arize-phoenix-client",
+    "tiktoken",
+    "openai",
+    "arize-toolkit",
+    "pandas",
+    "scikit-learn",
+    "nest-asyncio",
+    "swebench",
+    # Enhanced CLI and provider functionality
+    "click",
+    "google-genai",
+    "pillow",
+    "requests",
+    "pydantic",
+    "httpx",
+    "rich",
+    "click-spinner",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-mock",
+    "black",
+    "pre-commit",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "myst-parser",
 ]
 
 [project.urls]
-Homepage = "https://github.com/priyanjindal/prompt-learning"
-Repository = "https://github.com/priyanjindal/prompt-learning"
+Homepage = "https://github.com/Arize-ai/prompt-learning"
+Repository = "https://github.com/Arize-ai/prompt-learning"
+Documentation = "https://github.com/Arize-ai/prompt-learning#readme"
+Issues = "https://github.com/Arize-ai/prompt-learning/issues"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/prompt_learning"]
+[project.scripts]
+prompt-learn = "cli.main:cli"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["optimizer_sdk*", "cli*", "providers*", "core*", "interfaces*", "config*"]
+
+[tool.setuptools.package-data]
+"optimizer_sdk" = ["templates/*.txt"]
+"cli" = ["config/*.yaml"]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+exclude = '''
+/(
+    \.venv
+    | \.git
+    | \.pytest_cache
+    | __pycache__
+    | build
+    | dist
+    | \.egg-info
+)/
+'''
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

@@ -26,6 +26,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 import requests
 import urllib.parse
 from pathlib import Path
+
 #!pip install arize-phoenix-evals arize-phoenix-client tiktoken openai arize-toolkit
 
 # CONFIG: Experiment settings - adjust as needed
@@ -34,7 +35,9 @@ TRAIN_SPLIT_FRACTION = 0.5  # Fraction of data to use for training (rest for tes
 NUM_RULES = 50  # Number of rules in the prompt - adjust based on your evaluator prompt (this is NOT working on Config)
 
 # EXPERIMENT CONFIGURATION
-RUN_MULTI_RULE_EXPERIMENTS = False  # Set to True to run experiments with multiple rule counts
+RUN_MULTI_RULE_EXPERIMENTS = (
+    False  # Set to True to run experiments with multiple rule counts
+)
 RULE_COUNTS_TO_TEST = [10, 50, 100]  # Rule counts to test in multi-rule experiments
 NUM_OPTIMIZATION_LOOPS = 1  # Number of optimization loops per experiment (used by simple_test and optimize_loop)
 
@@ -55,20 +58,28 @@ NUM_OPTIMIZATION_LOOPS = 1  # Number of optimization loops per experiment (used 
 #    - Set NUM_OPTIMIZATION_LOOPS to control how many iterations per experiment (affects both simple_test and optimize_loop)
 
 import nest_asyncio, re
+
 nest_asyncio.apply()
 
 # 1️⃣  stricter variable detector
 from phoenix.evals.templates import PromptTemplate, PromptPartTemplate
+
 _TEMPLATE_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
+
+
 def _parse_variables_strict(self, tmpl: list[PromptPartTemplate]):  # [...]
     vars = set()
     for p in tmpl:
         vars.update(m.group(1) for m in _TEMPLATE_RE.finditer(p.template))
     return list(vars)
+
+
 PromptTemplate._parse_variables = _parse_variables_strict
 
 # 2️⃣  literal‑brace formatter
 from phoenix.evals.templates import PromptPart, MultimodalPrompt
+
+
 def _format_literal(self, variable_values, options=None):  # [...]
     prompt_msgs = []
     for part in self.prompt(options):
@@ -77,6 +88,8 @@ def _format_literal(self, variable_values, options=None):  # [...]
             msg = msg.replace(f"{{{var}}}", str(variable_values[var]))
         prompt_msgs.append(PromptPart(content_type=part.content_type, content=msg))
     return MultimodalPrompt(parts=prompt_msgs)
+
+
 PromptTemplate.format = _format_literal
 
 """## OpenAI Key
@@ -91,22 +104,24 @@ Create training and test datasets, and export to Arize.
 
 First, download the [dataset of queries](https://storage.googleapis.com/arize-assets/dev-rel/prompt-learning/queries.csv).
 """
+
+
 def download_bbh_json_files(download_dir="bbh-download"):
     """
     Download all JSON files from BigBench Hard repository.
-    
+
     Args:
         download_dir (str): Directory to download files to
-        
+
     Returns:
         list: List of downloaded file paths
     """
     os.makedirs(download_dir, exist_ok=True)
-    
+
     # Known BigBench Hard tasks from the literature
     bbh_tasks = [
         "boolean_expressions",
-        "causal_judgement", 
+        "causal_judgement",
         "date_understanding",
         "disambiguation_qa",
         "dyck_languages",
@@ -131,27 +146,27 @@ def download_bbh_json_files(download_dir="bbh-download"):
         "tracking_shuffled_objects_seven_objects",
         "tracking_shuffled_objects_three_objects",
         "web_of_lies",
-        "word_sorting"
+        "word_sorting",
     ]
-    
+
     base_url = "https://raw.githubusercontent.com/suzgunmirac/BIG-Bench-Hard/main/bbh"
     downloaded_files = []
-    
+
     for task_name in bbh_tasks:
         file_url = f"{base_url}/{task_name}.json"
         local_path = os.path.join(download_dir, f"{task_name}.json")
-        
+
         try:
             print(f"Downloading {task_name}.json...")
             response = requests.get(file_url)
             response.raise_for_status()
-            
-            with open(local_path, 'w', encoding='utf-8') as f:
+
+            with open(local_path, "w", encoding="utf-8") as f:
                 f.write(response.text)
-            
+
             downloaded_files.append(local_path)
             print(f"✓ Downloaded {task_name}.json")
-            
+
         except requests.exceptions.RequestException as e:
             print(f"✗ Failed to download {task_name}.json: {e}")
             # Try alternative URL structure
@@ -159,151 +174,153 @@ def download_bbh_json_files(download_dir="bbh-download"):
                 alt_url = f"https://raw.githubusercontent.com/google/BIG-bench/main/bigbench/benchmark_tasks/{task_name}/task.json"
                 response = requests.get(alt_url)
                 response.raise_for_status()
-                
-                with open(local_path, 'w', encoding='utf-8') as f:
+
+                with open(local_path, "w", encoding="utf-8") as f:
                     f.write(response.text)
-                
+
                 downloaded_files.append(local_path)
                 print(f"✓ Downloaded {task_name}.json from alternative source")
-                
+
             except requests.exceptions.RequestException as e2:
-                print(f"✗ Failed to download {task_name}.json from alternative source: {e2}")
-    
+                print(
+                    f"✗ Failed to download {task_name}.json from alternative source: {e2}"
+                )
+
     print(f"\nDownloaded {len(downloaded_files)} JSON files to {download_dir}/")
     return downloaded_files
+
 
 def load_json_to_dataframe(json_file_path):
     """
     Load a BigBench Hard JSON file and convert to DataFrame.
-    
+
     Args:
         json_file_path (str): Path to the JSON file
-        
+
     Returns:
         pandas.DataFrame: DataFrame with 'input' and 'target' columns
     """
-    with open(json_file_path, 'r', encoding='utf-8') as f:
+    with open(json_file_path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    
+
     # Handle different JSON structures
-    if 'examples' in data:
+    if "examples" in data:
         # Standard BIG-bench format
-        examples = data['examples']
+        examples = data["examples"]
         df_data = []
-        
+
         for example in examples:
-            input_text = example.get('input', '')
-            target = example.get('target', '')
-            
+            input_text = example.get("input", "")
+            target = example.get("target", "")
+
             # Handle different target formats
             if isinstance(target, list):
-                target = target[0] if target else ''
+                target = target[0] if target else ""
             elif isinstance(target, dict):
                 # Handle target_scores format
-                if 'target_scores' in example:
-                    target_scores = example['target_scores']
+                if "target_scores" in example:
+                    target_scores = example["target_scores"]
                     # Find the target with highest score
                     target = max(target_scores.items(), key=lambda x: x[1])[0]
                 else:
                     target = str(target)
-            
-            df_data.append({
-                'input': input_text,
-                'target': str(target)
-            })
-        
+
+            df_data.append({"input": input_text, "target": str(target)})
+
         return pd.DataFrame(df_data)
-    
+
     elif isinstance(data, list):
         # Direct list of examples
         df_data = []
         for example in data:
-            input_text = example.get('input', '')
-            target = example.get('target', example.get('output', ''))
-            
+            input_text = example.get("input", "")
+            target = example.get("target", example.get("output", ""))
+
             if isinstance(target, list):
-                target = target[0] if target else ''
-            
-            df_data.append({
-                'input': input_text,
-                'target': str(target)
-            })
-        
+                target = target[0] if target else ""
+
+            df_data.append({"input": input_text, "target": str(target)})
+
         return pd.DataFrame(df_data)
-    
+
     else:
         raise ValueError(f"Unknown JSON structure in {json_file_path}")
+
 
 def data_prep_json(json_file_path, num_samples=None):
     """
     Prepare training and test datasets from JSON file.
-    
+
     Args:
         json_file_path (str): Path to the JSON file
         num_samples (int): Number of samples to use (None for all)
-        
+
     Returns:
         tuple: (full_dataset, train_set, test_set, train_targets, test_targets)
     """
     if num_samples is None:
         num_samples = NUM_SAMPLES
-    
+
     # Load JSON data
     dataset_full = load_json_to_dataframe(json_file_path)
-    
+
     # Sample if requested
     if num_samples > 0 and len(dataset_full) > num_samples:
         dataset_sample = dataset_full.sample(num_samples, random_state=42)
     else:
         dataset_sample = dataset_full
-    
+
     # Split into train and test
-    train_set_with_targets = dataset_sample.sample(frac=TRAIN_SPLIT_FRACTION, random_state=42)
+    train_set_with_targets = dataset_sample.sample(
+        frac=TRAIN_SPLIT_FRACTION, random_state=42
+    )
     test_set_with_targets = dataset_sample.drop(train_set_with_targets.index)
-    
+
     # Save targets separately
-    train_targets = train_set_with_targets['target'].copy()
-    test_targets = test_set_with_targets['target'].copy()
-    
+    train_targets = train_set_with_targets["target"].copy()
+    test_targets = test_set_with_targets["target"].copy()
+
     # Remove target column from datasets
-    train_set = train_set_with_targets.drop('target', axis=1).copy()
-    test_set = test_set_with_targets.drop('target', axis=1).copy()
-    
+    train_set = train_set_with_targets.drop("target", axis=1).copy()
+    test_set = test_set_with_targets.drop("target", axis=1).copy()
+
     # Save to CSV files for compatibility with existing code
     train_set.to_csv("train.csv", index=False)
     test_set.to_csv("test.csv", index=False)
-    
+
     return dataset_sample, train_set, test_set, train_targets, test_targets
+
 
 def get_available_bbh_tasks(download_dir="./bbh-download"):
     """
     Get list of available BigBench Hard tasks from downloaded files.
-    
+
     Args:
         download_dir (str): Directory containing downloaded JSON files
-        
+
     Returns:
         list: List of task names (without .json extension)
     """
     print("line 291")
     if not os.path.exists(download_dir):
-        
+
         return []
-    
+
     tasks = []
     for filename in os.listdir(download_dir):
-        if filename.endswith('.json'):
+        if filename.endswith(".json"):
             tasks.append(filename[:-5])  # Remove .json extension
-    
+
     return sorted(tasks)
+
 
 def data_prep(dataset_name):
     """
     Legacy function for backward compatibility with CSV files.
-    
+
     Args:
         dataset_name (str): Name of the dataset (without .csv extension)
-        
+
     Returns:
         tuple: (dataset_sample, train_set, test_set)
     """
@@ -314,17 +331,18 @@ def data_prep(dataset_name):
     test_set = dataset_50.drop(train_set.index)
     train_set.to_csv("train.csv", index=False)
     test_set.to_csv("test.csv", index=False)
-    
+
     return dataset_50, train_set, test_set
+
 
 """## Initial System Prompt
 
 Initialize your system prompt. This is the original prompt that will be tested and optimized.
 """
 
-#system_prompt = "You are an expert in JSON webpage creation. This is your task: {input}"
-#system_prompt = "You are an expert in solving boolean expressions. Return your answer **in JSON** with a single key `result` whose value is either \"True\" or \"False\". This is your task: {input}"
-#system_prompt = "You are an expert in solving truthfulness puzzles. Return your answer **in JSON** with a single key `result` whose value is either \"Yes\" or \"No\". This is your task: {input}"
+# system_prompt = "You are an expert in JSON webpage creation. This is your task: {input}"
+# system_prompt = "You are an expert in solving boolean expressions. Return your answer **in JSON** with a single key `result` whose value is either \"True\" or \"False\". This is your task: {input}"
+# system_prompt = "You are an expert in solving truthfulness puzzles. Return your answer **in JSON** with a single key `result` whose value is either \"Yes\" or \"No\". This is your task: {input}"
 
 """## Evaluator
 
@@ -339,6 +357,7 @@ Additionally, it will attach an explanation as to why it chose correct or incorr
 
 nest_asyncio.apply()
 
+
 def find_correctness(output):
     """Extract correctness from LLM output"""
     # Look for "correct" or "incorrect" in the response
@@ -348,6 +367,7 @@ def find_correctness(output):
         return match.group(1).lower()
     else:
         return None
+
 
 def find_explanation(output):
     """Extract explanation from LLM output"""
@@ -359,15 +379,13 @@ def find_explanation(output):
     else:
         return None
 
+
 def evaluate_output_parser(response: str, row_index: int) -> dict:
     """Parser function for evaluate_output evaluator"""
     correctness = find_correctness(response)
     explanation = find_explanation(response)
 
-    return {
-        "correctness": correctness,
-        "explanation": explanation
-    }
+    return {"correctness": correctness, "explanation": explanation}
 
 
 def evaluate_output(dataset, eval_template):
@@ -380,10 +398,7 @@ def evaluate_output(dataset, eval_template):
     # Create the model
     eval_model = OpenAIModel(
         model="gpt-4o",
-        model_kwargs={
-            "response_format": {"type": "json_object"},
-            "temperature": 0
-        }
+        model_kwargs={"response_format": {"type": "json_object"}, "temperature": 0},
     )
 
     # Generate evaluations using llm_generate
@@ -393,7 +408,7 @@ def evaluate_output(dataset, eval_template):
         model=eval_model,
         output_parser=evaluate_output_parser,
         concurrency=20,
-        verbose=True
+        verbose=True,
     )
 
     # Merge the results back into the original dataset
@@ -408,21 +423,19 @@ def evaluate_output(dataset, eval_template):
 def generate_output(dataset, system_prompt):
     output_model = OpenAIModel(
         model="gpt-4.1-2025-04-14",
-        model_kwargs={
-            "response_format": {"type": "json_object"},
-            "temperature": 0
-        }
+        model_kwargs={"response_format": {"type": "json_object"}, "temperature": 0},
     )
     outputs = llm_generate(
         dataframe=dataset,
         template=system_prompt,
         model=output_model,
         concurrency=20,
-        verbose=True
+        verbose=True,
     )
     return outputs["output"]
 
-#test_set.head()
+
+# test_set.head()
 
 """## Optimization
 
@@ -434,6 +447,7 @@ There are 3 steps to every loop of optimization.
 
 This process repeats until we see good results on the test set. In this case, we measure our results to be satisfactory when all outputs are deemed "correct" by the evaluate_output evaluator we defined above.
 """
+
 
 def compute_metric(y_true, y_pred, scorer="accuracy"):
     """
@@ -455,10 +469,11 @@ def compute_metric(y_true, y_pred, scorer="accuracy"):
     else:
         raise ValueError(f"Unknown scorer: {scorer}")
 
+
 def compare_with_targets(outputs, targets, task_type="general"):
     """
     Compare model outputs with ground truth targets.
-    
+
     Args:
         outputs (pd.Series or list): Model outputs (JSON strings)
         targets (pd.Series or list): Ground truth targets
@@ -467,26 +482,26 @@ def compare_with_targets(outputs, targets, task_type="general"):
                         - "sorting": exact case-sensitive comparison (order matters)
                         - "boolean": case-insensitive for True/False
                         - "counting": numeric comparison
-        
+
     Returns:
         float: Accuracy score (0.0 to 1.0)
     """
     correct_count = 0
     total_count = len(outputs)
-    
+
     for output, target in zip(outputs, targets):
         try:
             # Parse JSON output to extract the result
             if isinstance(output, str):
                 output_data = json.loads(output)
-                predicted_value = output_data.get('result', '')
+                predicted_value = output_data.get("result", "")
             else:
                 predicted_value = str(output)
-            
+
             # Convert to string for comparison
             predicted_value = str(predicted_value).strip()
             target_value = str(target).strip()
-            
+
             # Task-specific comparison logic
             if task_type == "sorting":
                 # For sorting tasks, exact match required (case and order matter)
@@ -507,113 +522,138 @@ def compare_with_targets(outputs, targets, task_type="general"):
                 # General case: case-insensitive comparison (for boolean, yes/no, etc.)
                 if predicted_value.lower() == target_value.lower():
                     correct_count += 1
-                
+
         except (json.JSONDecodeError, KeyError, AttributeError) as e:
             # If we can't parse the output, count as incorrect
             continue
-    
+
     return correct_count / total_count if total_count > 0 else 0.0
+
 
 def get_ground_truth_accuracy(outputs, targets, task_type="general"):
     """
     Direct comparison function for outputs vs targets.
-    
+
     Args:
         outputs: Model outputs (can be from results['raw'][i]['output'])
         targets: Ground truth targets
         task_type: Task type for appropriate comparison logic
-        
+
     Returns:
         float: Accuracy score
     """
     return compare_with_targets(outputs, targets, task_type)
 
-def compare_results_with_targets(results, test_targets, train_targets=None, task_type="general"):
+
+def compare_results_with_targets(
+    results, test_targets, train_targets=None, task_type="general"
+):
     """
     Convenience function to compare all results with ground truth targets.
-    
+
     Args:
         results: Results dictionary from optimize_loop or simple_test
         test_targets: Ground truth test targets
         train_targets: Ground truth train targets (optional)
         task_type: Task type for appropriate comparison logic
-        
+
     Returns:
         dict: Accuracy scores for each iteration and summary
     """
     comparison = {
-        'test_accuracies': [],
-        'iteration_details': [],
-        'task_type': task_type
+        "test_accuracies": [],
+        "iteration_details": [],
+        "task_type": task_type,
     }
-    
+
     # Compare test outputs for each iteration
-    if 'raw' in results:
-        for i, test_df in enumerate(results['raw']):
-            if 'output' in test_df.columns:
-                accuracy = get_ground_truth_accuracy(test_df['output'], test_targets, task_type)
-                comparison['test_accuracies'].append(accuracy)
-                
+    if "raw" in results:
+        for i, test_df in enumerate(results["raw"]):
+            if "output" in test_df.columns:
+                accuracy = get_ground_truth_accuracy(
+                    test_df["output"], test_targets, task_type
+                )
+                comparison["test_accuracies"].append(accuracy)
+
                 # Get LLM evaluator score for this iteration if available
-                llm_score = results['test'][i] if i < len(results['test']) else None
-                
-                comparison['iteration_details'].append({
-                    'iteration': i,
-                    'ground_truth_accuracy': accuracy,
-                    'llm_evaluator_score': llm_score,
-                    'difference': abs(accuracy - llm_score) if llm_score is not None else None
-                })
-    
+                llm_score = results["test"][i] if i < len(results["test"]) else None
+
+                comparison["iteration_details"].append(
+                    {
+                        "iteration": i,
+                        "ground_truth_accuracy": accuracy,
+                        "llm_evaluator_score": llm_score,
+                        "difference": (
+                            abs(accuracy - llm_score) if llm_score is not None else None
+                        ),
+                    }
+                )
+
     # Summary stats
-    if comparison['test_accuracies']:
-        comparison['initial_accuracy'] = comparison['test_accuracies'][0]
-        comparison['final_accuracy'] = comparison['test_accuracies'][-1]
-        comparison['improvement'] = comparison['final_accuracy'] - comparison['initial_accuracy']
-        comparison['best_accuracy'] = max(comparison['test_accuracies'])
-    
+    if comparison["test_accuracies"]:
+        comparison["initial_accuracy"] = comparison["test_accuracies"][0]
+        comparison["final_accuracy"] = comparison["test_accuracies"][-1]
+        comparison["improvement"] = (
+            comparison["final_accuracy"] - comparison["initial_accuracy"]
+        )
+        comparison["best_accuracy"] = max(comparison["test_accuracies"])
+
     return comparison
+
 
 def analyze_evaluation_comparison(results_df, ground_truth_comparisons):
     """
     Analyze the difference between LLM evaluator scores and ground truth accuracy.
-    
+
     Args:
-        results_df (pd.DataFrame): Results dataframe from experiments  
+        results_df (pd.DataFrame): Results dataframe from experiments
         ground_truth_comparisons (list): List of comparison dicts from compare_results_with_targets()
-        
+
     Returns:
         pd.DataFrame: Comparison analysis
     """
     analysis_data = []
-    
+
     for idx, row in results_df.iterrows():
         if idx < len(ground_truth_comparisons):
             comparison = ground_truth_comparisons[idx]
-            
-            final_llm_score = row['test'][-1] if isinstance(row['test'], list) else row['test']
-            initial_llm_score = row['test'][0] if isinstance(row['test'], list) else row['test']
-            
-            final_ground_truth_acc = comparison['final_accuracy']
-            initial_ground_truth_acc = comparison['initial_accuracy']
-            
-            file_name = row.get('file', 'unknown')
-            task_name = comparison.get('task', f'task_{idx}')
-            
-            analysis_data.append({
-                'experiment': idx,
-                'task': task_name,
-                'evaluator_template': file_name,
-                'initial_llm_score': initial_llm_score,
-                'initial_ground_truth_accuracy': initial_ground_truth_acc,
-                'final_llm_score': final_llm_score,
-                'final_ground_truth_accuracy': final_ground_truth_acc,
-                'llm_improvement': final_llm_score - initial_llm_score,
-                'ground_truth_improvement': final_ground_truth_acc - initial_ground_truth_acc,
-                'final_difference': abs(final_llm_score - final_ground_truth_acc),
-                'agreement': 'High' if abs(final_llm_score - final_ground_truth_acc) < 0.1 else 'Low'
-            })
-    
+
+            final_llm_score = (
+                row["test"][-1] if isinstance(row["test"], list) else row["test"]
+            )
+            initial_llm_score = (
+                row["test"][0] if isinstance(row["test"], list) else row["test"]
+            )
+
+            final_ground_truth_acc = comparison["final_accuracy"]
+            initial_ground_truth_acc = comparison["initial_accuracy"]
+
+            file_name = row.get("file", "unknown")
+            task_name = comparison.get("task", f"task_{idx}")
+
+            analysis_data.append(
+                {
+                    "experiment": idx,
+                    "task": task_name,
+                    "evaluator_template": file_name,
+                    "initial_llm_score": initial_llm_score,
+                    "initial_ground_truth_accuracy": initial_ground_truth_acc,
+                    "final_llm_score": final_llm_score,
+                    "final_ground_truth_accuracy": final_ground_truth_acc,
+                    "llm_improvement": final_llm_score - initial_llm_score,
+                    "ground_truth_improvement": final_ground_truth_acc
+                    - initial_ground_truth_acc,
+                    "final_difference": abs(final_llm_score - final_ground_truth_acc),
+                    "agreement": (
+                        "High"
+                        if abs(final_llm_score - final_ground_truth_acc) < 0.1
+                        else "Low"
+                    ),
+                }
+            )
+
     return pd.DataFrame(analysis_data)
+
 
 def optimize_loop(
     train_set,
@@ -623,7 +663,7 @@ def optimize_loop(
     evaluators,
     threshold=1,
     loops=NUM_OPTIMIZATION_LOOPS,
-    scorer="accuracy"
+    scorer="accuracy",
 ):
     """
     scorer: one of "accuracy", "f1", "precision", "recall"
@@ -646,9 +686,11 @@ def optimize_loop(
     prompts = []
     raw_dfs = []
 
-    print(f"🚀 Starting prompt optimization with {loops} iterations (scorer: {scorer}, threshold: {threshold})")
+    print(
+        f"🚀 Starting prompt optimization with {loops} iterations (scorer: {scorer}, threshold: {threshold})"
+    )
     print()
-    
+
     # Initial test evaluation before optimization
     print(f"📊 Initial evaluation:")
     test_set["output"] = generate_output(test_set, system_prompt)
@@ -660,10 +702,10 @@ def optimize_loop(
     test_metrics.append(initial_metric_value)
     prompts.append(system_prompt)
     raw_dfs.append(copy.deepcopy(test_set))
-    
+
     print(f"✅ Initial test {scorer}: {initial_metric_value}")
-    print('\n')
-    
+    print("\n")
+
     if initial_metric_value >= threshold:
         print(f"🎉 Initial prompt already meets threshold!")
         result = {
@@ -672,13 +714,13 @@ def optimize_loop(
             "test": test_metrics,
             "prompt": prompts,
             "file": eval_template,
-            "raw": raw_dfs
+            "raw": raw_dfs,
         }
         return result
-    
+
     while loops > 0:
         print(f"📊 Loop {curr_loop}: Optimizing prompt...")
-        
+
         # 1. Train set evaluation and optimization
         train_outputs = generate_output(train_set, system_prompt)
         train_set["output"] = train_outputs
@@ -690,7 +732,7 @@ def optimize_loop(
         optimizer = PromptLearningOptimizer(
             prompt=system_prompt,
             model_choice="gpt-4o",
-            openai_api_key=os.getenv("OPENAI_API_KEY")
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
         )
 
         # Create evaluators with the correct num_rules parameter
@@ -698,22 +740,24 @@ def optimize_loop(
         # Your evaluators might be defined differently.
         evaluators_with_rules = []
         for evaluator in evaluators:
-            if evaluator.__name__ == 'evaluate_output':
-                evaluators_with_rules.append(lambda ds: evaluate_output(ds, eval_template))
+            if evaluator.__name__ == "evaluate_output":
+                evaluators_with_rules.append(
+                    lambda ds: evaluate_output(ds, eval_template)
+                )
             else:
                 evaluators_with_rules.append(evaluator)
-        
+
         train_set, _ = optimizer.run_evaluators(
             train_set,
             evaluators_with_rules,
-            feedback_columns=["correctness", "explanation", "rule_violations"]
+            feedback_columns=["correctness", "explanation", "rule_violations"],
         )
 
         system_prompt = optimizer.optimize(
             train_set,
             "output",
             feedback_columns=["correctness", "explanation", "rule_violations"],
-            context_size_k=128000
+            context_size_k=128000,
         )
 
         # Evaluate train set after optimization
@@ -724,13 +768,15 @@ def optimize_loop(
         train_evals_post = train_evals_post_all["correctness"]
         y_true_train_post = ["correct"] * len(train_evals_post)
         y_pred_train_post = train_evals_post
-        train_metric_post_value = compute_metric(y_true_train_post, y_pred_train_post, scorer=scorer)
+        train_metric_post_value = compute_metric(
+            y_true_train_post, y_pred_train_post, scorer=scorer
+        )
         train_metrics.append(train_metric_post_value)
         print(f"✅ Train {scorer}: {train_metric_post_value}")
 
         # 2. Test set evaluation with optimized prompt
         test_set["output"] = generate_output(test_set, system_prompt)
-        
+
         test_evals_all = evaluate_output(test_set, eval_template)[0]
         test_evals = test_evals_all["correctness"]
         y_true = ["correct"] * len(test_evals)
@@ -739,10 +785,10 @@ def optimize_loop(
         test_metrics.append(metric_value)
         prompts.append(system_prompt)
         raw_dfs.append(copy.deepcopy(test_set))
-        
+
         print(f"✅ Test {scorer}: {metric_value}")
         print("\n")
-        
+
         # 3. Check threshold
         if metric_value >= threshold:
             print(f"🎉 Threshold reached! Stopping optimization.")
@@ -752,7 +798,7 @@ def optimize_loop(
                 "test": test_metrics,
                 "prompt": prompts,
                 "file": eval_template,
-                "raw": raw_dfs
+                "raw": raw_dfs,
             }
             return result
 
@@ -766,24 +812,23 @@ def optimize_loop(
         "test": test_metrics,
         "prompt": prompts,
         "file": eval_template,
-        "raw": raw_dfs
+        "raw": raw_dfs,
     }
     return result
+
 
 def validate_prompt_files(rule_counts, eval_template):
     """Validate that all required prompt files exist for the given rule counts."""
     import os
-    
+
     missing_files = []
     for num_rules in rule_counts:
-        required_files = [
-            f"../evaluator_prompts/{eval_template}.txt"
-        ]
-        
+        required_files = [f"../evaluator_prompts/{eval_template}.txt"]
+
         for file_path in required_files:
             if not os.path.exists(file_path):
                 missing_files.append(file_path)
-    
+
     if missing_files:
         print("❌ Missing prompt files:")
         for file_path in missing_files:
@@ -792,118 +837,139 @@ def validate_prompt_files(rule_counts, eval_template):
         for file_path in os.listdir("../evaluator_prompts"):
             print(f"   - evaluator_prompts/{file_path}")
         raise FileNotFoundError(f"Missing {len(missing_files)} required prompt files")
-    
+
     print("✅ All required prompt files found")
+
 
 def save_experiment_results(results, filename="experiment_results.json"):
     """Save experiment results to a JSON file."""
     from datetime import datetime
-    
+
     # Add timestamp to results
     results_with_timestamp = {
         "timestamp": datetime.now().isoformat(),
-        "results": results
+        "results": results,
     }
-    
-    with open(filename, 'w') as f:
+
+    with open(filename, "w") as f:
         json.dump(results_with_timestamp, f, indent=2, default=str)
-    
+
     print(f"✅ Results saved to {filename}")
+
 
 def save_single_experiment_csv(results, filename):
     """
     Save a single experiment's results to CSV format.
-    
+
     Args:
         results: Results from a single optimize_loop run
         filename: Output CSV filename
     """
     import pandas as pd
     from datetime import datetime
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
+
     # Extract data
-    #num_rules = results['num_rules']
-    train_metrics = results.get('train', [])
-    test_metrics = results['test']
-    prompts = results['prompt']
-    
+    # num_rules = results['num_rules']
+    train_metrics = results.get("train", [])
+    test_metrics = results["test"]
+    prompts = results["prompt"]
+
     # Create DataFrame
     data = []
     for i, (test_metric, prompt) in enumerate(zip(test_metrics, prompts)):
         row = {
-            'iteration': i,
+            "iteration": i,
             #'num_rules': num_rules,
-            'test_accuracy': test_metric,
-            'prompt': prompt
+            "test_accuracy": test_metric,
+            "prompt": prompt,
         }
-        
+
         # Add train metric if available
         if i < len(train_metrics):
-            row['train_accuracy'] = train_metrics[i]
-        
+            row["train_accuracy"] = train_metrics[i]
+
         data.append(row)
-    
+
     df = pd.DataFrame(data)
-    
+
     # Save to CSV with timestamp
     filename_with_timestamp = f"{filename}_{timestamp}.csv"
     df.to_csv(filename_with_timestamp, index=False)
     print(f"✅ Results saved to {filename_with_timestamp}")
-    #print(f"   📊 {len(df)} iterations, {num_rules} rules")
+    # print(f"   📊 {len(df)} iterations, {num_rules} rules")
     print(f"   📈 Final accuracy: {df['test_accuracy'].iloc[-1]:.3f}")
+
 
 def save_multi_experiment_csv(results, base_filename="experiment_results"):
     """
     Save multiple experiments' results to separate CSV files.
-    
+
     Args:
         results: Results from run_multi_rule_experiments
         base_filename: Base name for the CSV files
     """
     from datetime import datetime
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
+
     for experiment_name, experiment_results in results.items():
         csv_filename = f"{base_filename}_{experiment_name}_{timestamp}.csv"
         save_single_experiment_csv(experiment_results, csv_filename)
 
-def simple_test(train_set, test_set, system_prompt, eval_template, results_df, threshold=1, loops=NUM_OPTIMIZATION_LOOPS, scorer="accuracy"):
+
+def simple_test(
+    train_set,
+    test_set,
+    system_prompt,
+    eval_template,
+    results_df,
+    threshold=1,
+    loops=NUM_OPTIMIZATION_LOOPS,
+    scorer="accuracy",
+):
     """
     Run prompt optimization experiment with LLM evaluator only.
     For ground truth comparison, use compare_results_with_targets() afterwards.
-    
+
     Args:
         loops: Number of optimization loops (defaults to NUM_OPTIMIZATION_LOOPS config)
     """
     evaluators = [evaluate_output]
     results = optimize_loop(
-        train_set, test_set, system_prompt, eval_template, evaluators,
+        train_set,
+        test_set,
+        system_prompt,
+        eval_template,
+        evaluators,
         threshold=threshold,
         loops=loops,
-        scorer=scorer
+        scorer=scorer,
     )
     print("✅ Completed experiment")
     print(f"   Initial metric: {results['initial metric']:.3f}")
     print(f"   Final test {scorer}: {results['test'][-1]:.3f}")
     print(f"   Final prompt: {results['prompt'][-1]}")
-    
-    results_df = pd.concat([results_df, pd.DataFrame({k: [v] for k, v in results.items()})], ignore_index=True)
+
+    results_df = pd.concat(
+        [results_df, pd.DataFrame({k: [v] for k, v in results.items()})],
+        ignore_index=True,
+    )
     return results, results_df
 
-wol_prompt = "You are an expert in solving truthfulness puzzles. Return your answer **in JSON** with a single key `result` whose value is either \"Yes\" or \"No\". This is your task: {input}"
-bool_prompt = "You are an expert in solving boolean expressions. Return your answer **in JSON** with a single key `result` whose value is either \"True\" or \"False\". This is your task: {input}"
+
+wol_prompt = 'You are an expert in solving truthfulness puzzles. Return your answer **in JSON** with a single key `result` whose value is either "Yes" or "No". This is your task: {input}'
+bool_prompt = 'You are an expert in solving boolean expressions. Return your answer **in JSON** with a single key `result` whose value is either "True" or "False". This is your task: {input}'
 word_sorting_prompt = "You are an expert in sorting words alphabetically. Return your answer **in JSON** with a single key `result` whose value is the alphabetically sorted list of words separated by spaces. This is your task: {input}"
-sports_prompt = "You are an expert in understanding sports. Return your answer **in JSON** with a single key `result` whose value is either \"Yes\" or \"No\". This is your task: {input}"
+sports_prompt = 'You are an expert in understanding sports. Return your answer **in JSON** with a single key `result` whose value is either "Yes" or "No". This is your task: {input}'
 object_prompt = "You are an expert in counting objects. Return your answer **in JSON** with a single key `result` whose value is the number of objects in the input. This is your task: {input}"
 # Comprehensive prompts for all BigBench Hard tasks
 causal_prompt = "You are an expert in causal reasoning. Analyze the given scenario and determine the causal relationship. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 date_prompt = "You are an expert in date understanding and temporal reasoning. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 disambiguation_prompt = "You are an expert in disambiguation and question answering. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 dyck_prompt = "You are an expert in formal language theory and parsing Dyck languages. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
-fallacies_prompt = "You are an expert in identifying formal fallacies in logical arguments. Return your answer **in JSON** with a single key `result` whose value is either \"valid\" or \"invalid\". This is your task: {input}"
+fallacies_prompt = 'You are an expert in identifying formal fallacies in logical arguments. Return your answer **in JSON** with a single key `result` whose value is either "valid" or "invalid". This is your task: {input}'
 geometric_prompt = "You are an expert in geometric reasoning and shape analysis. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 hyperbaton_prompt = "You are an expert in syntax and understanding hyperbaton (word order variations). Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 logical_deduction_prompt = "You are an expert in logical deduction and reasoning. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
@@ -913,13 +979,13 @@ navigate_prompt = "You are an expert in navigation and spatial reasoning. Return
 penguins_prompt = "You are an expert in table reasoning and data analysis. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 colored_objects_prompt = "You are an expert in reasoning about colored objects and their properties. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 ruin_names_prompt = "You are an expert in name corruption and string manipulation. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
-translation_prompt = "You are an expert in detecting translation errors. Return your answer **in JSON** with a single key `result` whose value is either \"Yes\" or \"No\". This is your task: {input}"
+translation_prompt = 'You are an expert in detecting translation errors. Return your answer **in JSON** with a single key `result` whose value is either "Yes" or "No". This is your task: {input}'
 snarks_prompt = "You are an expert in solving logical puzzles and snarks. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 temporal_prompt = "You are an expert in temporal sequence reasoning and time-based logic. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 tracking_prompt = "You are an expert in tracking shuffled objects and spatial reasoning. Return your answer **in JSON** with a single key `result`. This is your task: {input}"
 
 # Main execution code - uncomment to run experiments with CSV data
-# Note: This code assumes you have the original CSV files. 
+# Note: This code assumes you have the original CSV files.
 # For BigBench Hard JSON experiments, use run_bbh_experiments() instead.
 
 """
@@ -1068,17 +1134,22 @@ if "boolean_expressions" in available_tasks:
     print(f"Sample target: {dataset.iloc[0]['target']}")
 """
 
+
 def run_bbh_experiments():
     """
     Function to run experiments on BigBench Hard tasks.
     Call this function to download JSON files and run experiments.
     """
     import os
+
     # Download files if not already downloaded
-    if not os.path.exists("./bbh-download") or len(get_available_bbh_tasks("bbh-download")) == 0:
+    if (
+        not os.path.exists("./bbh-download")
+        or len(get_available_bbh_tasks("bbh-download")) == 0
+    ):
         print("Downloading BigBench Hard JSON files...")
         downloaded_files = download_bbh_json_files("bbh-download")
-    
+
     # Define task mappings (evaluator, prompt, task_type)
     task_mappings = {
         "boolean_expressions": ("evaluator-bool", bool_prompt, "boolean"),
@@ -1089,154 +1160,242 @@ def run_bbh_experiments():
         # All 27 BigBench Hard tasks
         "causal_judgement": ("evaluator-causal", causal_prompt, "general"),
         "date_understanding": ("evaluator-date", date_prompt, "general"),
-        "disambiguation_qa": ("evaluator-disambiguation", disambiguation_prompt, "general"),
-        #"dyck_languages": ("evaluator-dyck", dyck_prompt, "general"),
+        "disambiguation_qa": (
+            "evaluator-disambiguation",
+            disambiguation_prompt,
+            "general",
+        ),
+        # "dyck_languages": ("evaluator-dyck", dyck_prompt, "general"),
         "formal_fallacies": ("evaluator-fallacies", fallacies_prompt, "general"),
         "geometric_shapes": ("evaluator-geometric", geometric_prompt, "general"),
         "hyperbaton": ("evaluator-hyperbaton", hyperbaton_prompt, "general"),
-        "logical_deduction_five_objects": ("evaluator-logical", logical_deduction_prompt, "general"),
-        "logical_deduction_seven_objects": ("evaluator-logical", logical_deduction_prompt, "general"),
-        "logical_deduction_three_objects": ("evaluator-logical", logical_deduction_prompt, "general"),
-        #"movie_recommendation": ("evaluator-movie", movie_prompt, "general"),
-        "multistep_arithmetic_two": ("evaluator-arithmetic", arithmetic_prompt, "counting"),
-        #"navigate": ("evaluator-navigate", navigate_prompt, "general"),
+        "logical_deduction_five_objects": (
+            "evaluator-logical",
+            logical_deduction_prompt,
+            "general",
+        ),
+        "logical_deduction_seven_objects": (
+            "evaluator-logical",
+            logical_deduction_prompt,
+            "general",
+        ),
+        "logical_deduction_three_objects": (
+            "evaluator-logical",
+            logical_deduction_prompt,
+            "general",
+        ),
+        # "movie_recommendation": ("evaluator-movie", movie_prompt, "general"),
+        "multistep_arithmetic_two": (
+            "evaluator-arithmetic",
+            arithmetic_prompt,
+            "counting",
+        ),
+        # "navigate": ("evaluator-navigate", navigate_prompt, "general"),
         "penguins_in_a_table": ("evaluator-penguins", penguins_prompt, "general"),
-        "reasoning_about_colored_objects": ("evaluator-colored", colored_objects_prompt, "general"),
-        #"ruin_names": ("evaluator-ruin", ruin_names_prompt, "general"),
-        "salient_translation_error_detection": ("evaluator-translation", translation_prompt, "general"),
+        "reasoning_about_colored_objects": (
+            "evaluator-colored",
+            colored_objects_prompt,
+            "general",
+        ),
+        # "ruin_names": ("evaluator-ruin", ruin_names_prompt, "general"),
+        "salient_translation_error_detection": (
+            "evaluator-translation",
+            translation_prompt,
+            "general",
+        ),
         "snarks": ("evaluator-snarks", snarks_prompt, "general"),
         "temporal_sequences": ("evaluator-temporal", temporal_prompt, "general"),
-        "tracking_shuffled_objects_five_objects": ("evaluator-tracking", tracking_prompt, "general"),
-        "tracking_shuffled_objects_seven_objects": ("evaluator-tracking", tracking_prompt, "general"),
-        "tracking_shuffled_objects_three_objects": ("evaluator-tracking", tracking_prompt, "general"),
+        "tracking_shuffled_objects_five_objects": (
+            "evaluator-tracking",
+            tracking_prompt,
+            "general",
+        ),
+        "tracking_shuffled_objects_seven_objects": (
+            "evaluator-tracking",
+            tracking_prompt,
+            "general",
+        ),
+        "tracking_shuffled_objects_three_objects": (
+            "evaluator-tracking",
+            tracking_prompt,
+            "general",
+        ),
     }
-    
-    results_df = pd.DataFrame(columns=["initial metric", "train", "test", "prompt", "file", "raw"])
+
+    results_df = pd.DataFrame(
+        columns=["initial metric", "train", "test", "prompt", "file", "raw"]
+    )
     all_comparisons = []  # Store ground truth comparisons separately
-    
+
     # Run experiments for each task
     for task_name, (eval_template, prompt, task_type) in task_mappings.items():
         json_file_path = f"bbh-download/{task_name}.json"
         if os.path.exists(json_file_path):
             print(f"\n🔬 Running experiment for {task_name}...")
-            dataset, train_set, test_set, train_targets, test_targets = data_prep_json(json_file_path)
-            
+            dataset, train_set, test_set, train_targets, test_targets = data_prep_json(
+                json_file_path
+            )
+
             # Run the optimization experiment (clean, no targets)
-            results, results_df = simple_test(train_set, test_set, prompt, eval_template, results_df)
-            
+            results, results_df = simple_test(
+                train_set, test_set, prompt, eval_template, results_df
+            )
+
             # Do ground truth comparison separately with appropriate task type
             print(f"📊 Comparing with ground truth (task_type: {task_type})...")
-            comparison = compare_results_with_targets(results, test_targets, task_type=task_type)
-            comparison['task'] = task_name
-            comparison['eval_template'] = eval_template
+            comparison = compare_results_with_targets(
+                results, test_targets, task_type=task_type
+            )
+            comparison["task"] = task_name
+            comparison["eval_template"] = eval_template
             all_comparisons.append(comparison)
-            
+
             # Print ground truth results
-            print(f"   Initial ground truth accuracy: {comparison['initial_accuracy']:.3f}")
+            print(
+                f"   Initial ground truth accuracy: {comparison['initial_accuracy']:.3f}"
+            )
             print(f"   Final ground truth accuracy: {comparison['final_accuracy']:.3f}")
             print(f"   Ground truth improvement: {comparison['improvement']:.3f}")
-            
+
         else:
             print(f"⚠️  Skipping {task_name} - file not found")
-    
+
     # Save results
     results_df.to_csv("bbh_results.csv")
     print("\n✅ LLM evaluator results saved to bbh_results.csv")
-    
+
     # Save ground truth comparison results
     if all_comparisons:
-        comparison_df = pd.DataFrame([
-            {
-                'task': comp['task'],
-                'eval_template': comp['eval_template'],
-                'initial_gt_accuracy': comp['initial_accuracy'],
-                'final_gt_accuracy': comp['final_accuracy'],
-                'gt_improvement': comp['improvement'],
-                'best_gt_accuracy': comp['best_accuracy']
-            }
-            for comp in all_comparisons
-        ])
+        comparison_df = pd.DataFrame(
+            [
+                {
+                    "task": comp["task"],
+                    "eval_template": comp["eval_template"],
+                    "initial_gt_accuracy": comp["initial_accuracy"],
+                    "final_gt_accuracy": comp["final_accuracy"],
+                    "gt_improvement": comp["improvement"],
+                    "best_gt_accuracy": comp["best_accuracy"],
+                }
+                for comp in all_comparisons
+            ]
+        )
         comparison_df.to_csv("bbh_ground_truth_comparison.csv", index=False)
         print("✅ Ground truth comparison saved to bbh_ground_truth_comparison.csv")
-        
+
         # Create summary table with LLM evaluator scores
         summary_data = []
-        for i, (comp, (idx, row)) in enumerate(zip(all_comparisons, results_df.iterrows())):
-            final_llm_score = row['test'][-1] if isinstance(row['test'], list) and len(row['test']) > 0 else 0.0
-            initial_llm_score = row['test'][0] if isinstance(row['test'], list) and len(row['test']) > 0 else 0.0
-            
-            summary_data.append({
-                'Task': comp['task'],
-                'Initial_Ground_Truth_Accuracy': comp['initial_accuracy'],
-                'Final_Ground_Truth_Accuracy': comp['final_accuracy'],
-                'Initial_LLM_Evaluator_Score': initial_llm_score,
-                'Final_LLM_Evaluator_Score': final_llm_score,
-                'Ground_Truth_Improvement': comp['improvement'],
-                'LLM_Evaluator_Improvement': final_llm_score - initial_llm_score,
-                'Task_Type': comp['task_type']
-            })
-        
+        for i, (comp, (idx, row)) in enumerate(
+            zip(all_comparisons, results_df.iterrows())
+        ):
+            final_llm_score = (
+                row["test"][-1]
+                if isinstance(row["test"], list) and len(row["test"]) > 0
+                else 0.0
+            )
+            initial_llm_score = (
+                row["test"][0]
+                if isinstance(row["test"], list) and len(row["test"]) > 0
+                else 0.0
+            )
+
+            summary_data.append(
+                {
+                    "Task": comp["task"],
+                    "Initial_Ground_Truth_Accuracy": comp["initial_accuracy"],
+                    "Final_Ground_Truth_Accuracy": comp["final_accuracy"],
+                    "Initial_LLM_Evaluator_Score": initial_llm_score,
+                    "Final_LLM_Evaluator_Score": final_llm_score,
+                    "Ground_Truth_Improvement": comp["improvement"],
+                    "LLM_Evaluator_Improvement": final_llm_score - initial_llm_score,
+                    "Task_Type": comp["task_type"],
+                }
+            )
+
         summary_df = pd.DataFrame(summary_data)
-        
+
         # Print formatted table
         print(f"\n📊 EXPERIMENT SUMMARY TABLE")
         print("=" * 100)
-        print(f"{'Task':<20} {'Init GT':<8} {'Final GT':<9} {'Init LLM':<9} {'Final LLM':<10} {'GT Δ':<7} {'LLM Δ':<8} {'Type':<8}")
+        print(
+            f"{'Task':<20} {'Init GT':<8} {'Final GT':<9} {'Init LLM':<9} {'Final LLM':<10} {'GT Δ':<7} {'LLM Δ':<8} {'Type':<8}"
+        )
         print("-" * 100)
-        
+
         for _, row in summary_df.iterrows():
-            print(f"{row['Task']:<20} {row['Initial_Ground_Truth_Accuracy']:<8.3f} "
-                  f"{row['Final_Ground_Truth_Accuracy']:<9.3f} {row['Initial_LLM_Evaluator_Score']:<9.3f} "
-                  f"{row['Final_LLM_Evaluator_Score']:<10.3f} {row['Ground_Truth_Improvement']:<7.3f} "
-                  f"{row['LLM_Evaluator_Improvement']:<8.3f} {row['Task_Type']:<8}")
-        
+            print(
+                f"{row['Task']:<20} {row['Initial_Ground_Truth_Accuracy']:<8.3f} "
+                f"{row['Final_Ground_Truth_Accuracy']:<9.3f} {row['Initial_LLM_Evaluator_Score']:<9.3f} "
+                f"{row['Final_LLM_Evaluator_Score']:<10.3f} {row['Ground_Truth_Improvement']:<7.3f} "
+                f"{row['LLM_Evaluator_Improvement']:<8.3f} {row['Task_Type']:<8}"
+            )
+
         print("-" * 100)
-        print(f"{'AVERAGE':<20} {summary_df['Initial_Ground_Truth_Accuracy'].mean():<8.3f} "
-              f"{summary_df['Final_Ground_Truth_Accuracy'].mean():<9.3f} "
-              f"{summary_df['Initial_LLM_Evaluator_Score'].mean():<9.3f} "
-              f"{summary_df['Final_LLM_Evaluator_Score'].mean():<10.3f} "
-              f"{summary_df['Ground_Truth_Improvement'].mean():<7.3f} "
-              f"{summary_df['LLM_Evaluator_Improvement'].mean():<8.3f}")
-        
+        print(
+            f"{'AVERAGE':<20} {summary_df['Initial_Ground_Truth_Accuracy'].mean():<8.3f} "
+            f"{summary_df['Final_Ground_Truth_Accuracy'].mean():<9.3f} "
+            f"{summary_df['Initial_LLM_Evaluator_Score'].mean():<9.3f} "
+            f"{summary_df['Final_LLM_Evaluator_Score'].mean():<10.3f} "
+            f"{summary_df['Ground_Truth_Improvement'].mean():<7.3f} "
+            f"{summary_df['LLM_Evaluator_Improvement'].mean():<8.3f}"
+        )
+
         # Save summary table (not in .gitignore)
-        summary_df.to_csv("experiment_summary_table.txt", index=False, sep='\t')
+        summary_df.to_csv("experiment_summary_table.txt", index=False, sep="\t")
         print(f"\n✅ Summary table saved to experiment_summary_table.txt")
-        
+
         # Save detailed raw comparison data (not in .gitignore)
         import os
+
         os.makedirs("raw_comparison_data", exist_ok=True)
-        
+
         for i, comp in enumerate(all_comparisons):
-            task_name = comp['task']
-            
+            task_name = comp["task"]
+
             # Save iteration details for this task
-            details_df = pd.DataFrame(comp['iteration_details'])
+            details_df = pd.DataFrame(comp["iteration_details"])
             details_filename = f"raw_comparison_data/{task_name}_iteration_details.txt"
-            details_df.to_csv(details_filename, index=False, sep='\t')
-            
+            details_df.to_csv(details_filename, index=False, sep="\t")
+
             # Save test accuracies for this task
             accuracies_data = {
-                'iteration': list(range(len(comp['test_accuracies']))),
-                'ground_truth_accuracy': comp['test_accuracies'],
-                'task_type': [comp['task_type']] * len(comp['test_accuracies'])
+                "iteration": list(range(len(comp["test_accuracies"]))),
+                "ground_truth_accuracy": comp["test_accuracies"],
+                "task_type": [comp["task_type"]] * len(comp["test_accuracies"]),
             }
             accuracies_df = pd.DataFrame(accuracies_data)
-            accuracies_filename = f"raw_comparison_data/{task_name}_ground_truth_accuracies.txt"
-            accuracies_df.to_csv(accuracies_filename, index=False, sep='\t')
-        
+            accuracies_filename = (
+                f"raw_comparison_data/{task_name}_ground_truth_accuracies.txt"
+            )
+            accuracies_df.to_csv(accuracies_filename, index=False, sep="\t")
+
         print(f"✅ Raw comparison data saved to raw_comparison_data/ directory")
-        print(f"   📁 Files: {len(all_comparisons) * 2} detailed files (iteration details + accuracies per task)")
-        
+        print(
+            f"   📁 Files: {len(all_comparisons) * 2} detailed files (iteration details + accuracies per task)"
+        )
+
         # Print final summary
         print(f"\n📈 Overall Results:")
-        print(f"   Average final ground truth accuracy: {summary_df['Final_Ground_Truth_Accuracy'].mean():.3f}")
-        print(f"   Average ground truth improvement: {summary_df['Ground_Truth_Improvement'].mean():.3f}")
-        print(f"   Average final LLM evaluator score: {summary_df['Final_LLM_Evaluator_Score'].mean():.3f}")
-        print(f"   Average LLM evaluator improvement: {summary_df['LLM_Evaluator_Improvement'].mean():.3f}")
-        print(f"   Best performing task (GT): {summary_df.loc[summary_df['Final_Ground_Truth_Accuracy'].idxmax(), 'Task']}")
-        print(f"   Best performing task (LLM): {summary_df.loc[summary_df['Final_LLM_Evaluator_Score'].idxmax(), 'Task']}")
-    
+        print(
+            f"   Average final ground truth accuracy: {summary_df['Final_Ground_Truth_Accuracy'].mean():.3f}"
+        )
+        print(
+            f"   Average ground truth improvement: {summary_df['Ground_Truth_Improvement'].mean():.3f}"
+        )
+        print(
+            f"   Average final LLM evaluator score: {summary_df['Final_LLM_Evaluator_Score'].mean():.3f}"
+        )
+        print(
+            f"   Average LLM evaluator improvement: {summary_df['LLM_Evaluator_Improvement'].mean():.3f}"
+        )
+        print(
+            f"   Best performing task (GT): {summary_df.loc[summary_df['Final_Ground_Truth_Accuracy'].idxmax(), 'Task']}"
+        )
+        print(
+            f"   Best performing task (LLM): {summary_df.loc[summary_df['Final_LLM_Evaluator_Score'].idxmax(), 'Task']}"
+        )
+
     return results_df, all_comparisons, summary_df
+
 
 # To run BigBench Hard experiments, uncomment the following line:
 # bbh_results = run_bbh_experiments()
@@ -1247,25 +1406,37 @@ def run_bbh_experiments():
 print("🚀 BigBench Hard JSON Integration Loaded!")
 print("📖 For usage instructions, see README_BBH.md")
 print("")
-print("⚙️  Configuration: Edit NUM_OPTIMIZATION_LOOPS at top of file to control experiment iterations")
+print(
+    "⚙️  Configuration: Edit NUM_OPTIMIZATION_LOOPS at top of file to control experiment iterations"
+)
 print("")
 print("Quick start:")
 print("1. Test download: python test_bbh_download.py")
-print("2. Run experiments: from pl_multidataset import run_bbh_experiments; run_bbh_experiments()")
-print("3. Or download files manually: from pl_multidataset import download_bbh_json_files; download_bbh_json_files()")
+print(
+    "2. Run experiments: from pl_multidataset import run_bbh_experiments; run_bbh_experiments()"
+)
+print(
+    "3. Or download files manually: from pl_multidataset import download_bbh_json_files; download_bbh_json_files()"
+)
 print("")
 print("Available functions:")
 print("- download_bbh_json_files() - Download BigBench Hard JSON files")
-print("- get_available_bbh_tasks() - List available tasks") 
-print("- data_prep_json() - Prepare data from JSON files (targets removed & saved separately)")
+print("- get_available_bbh_tasks() - List available tasks")
+print(
+    "- data_prep_json() - Prepare data from JSON files (targets removed & saved separately)"
+)
 print("- run_bbh_experiments() - Run complete experiments")
 print("- compare_with_targets() - Compare model outputs with ground truth")
 print("- get_ground_truth_accuracy() - Direct comparison: outputs vs targets")
-print("- compare_results_with_targets() - Convenience function for full results comparison")
-print("- analyze_evaluation_comparison() - Compare LLM evaluator vs ground truth scores")
+print(
+    "- compare_results_with_targets() - Convenience function for full results comparison"
+)
+print(
+    "- analyze_evaluation_comparison() - Compare LLM evaluator vs ground truth scores"
+)
 print("")
 print("🆕 NEW: Clean separation of concerns + Enhanced reporting")
-print("     1. Target columns automatically removed from train/test sets") 
+print("     1. Target columns automatically removed from train/test sets")
 print("     2. simple_test() does LLM evaluation only (clean)")
 print("     3. compare_results_with_targets() does ground truth comparison separately")
 print("     4. Summary table with all metrics (GT accuracy + LLM scores)")
