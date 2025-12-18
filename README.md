@@ -117,8 +117,18 @@ prompt-learning/
 
 ### Installation
 
+Install the `prompt-learning` package via pip:
+
 ```bash
-pip install -r requirements.txt
+pip install prompt-learning
+```
+
+Or install from source for development:
+
+```bash
+git clone https://github.com/priyanjindal/prompt-learning.git
+cd prompt-learning
+pip install -e .
 ```
 
 ### Environment Setup
@@ -131,28 +141,141 @@ export OPENAI_API_KEY="your-api-key-here"
 
 ```python
 import pandas as pd
-from optimizer_sdk.prompt_learning_optimizer import PromptLearningOptimizer
+from prompt_learning import PromptLearningOptimizer
 
 # Create dataset with English feedback
 dataset = pd.DataFrame({
-    'input': ["Generate a tech company's career page"],
-    'output': ["{incorrect JSON output}"],
-    'feedback': ["The generated JSON breaks several rules: missing 'updatedAt' field, top-level key should be 'page'"]
+    'query': [
+        "I can't log in to my account anymore",
+        "My password reset email never arrived",
+        "I was charged twice for the same order",
+    ],
+    'output': [
+        "Login Issues",
+        "Password Reset",
+        "Billing Inquiry",
+    ],
+    'feedback': [
+        "correct",
+        "correct",
+        "correct",
+    ]
 })
+
+# Define your prompt with template variables
+prompt = """You are a customer support classifier.
+Classify the query into a category.
+
+Query: {query}
+
+Category:"""
 
 # Initialize optimizer
 optimizer = PromptLearningOptimizer(
-    prompt="You are an expert in JSON webpage creation. Generate: {input}",
-    model_choice="gpt-4"
+    prompt=prompt,
+    model_choice="gpt-4o"
 )
 
-# Optimize the prompt using English feedback
+# Optimize the prompt using feedback
 optimized_prompt = optimizer.optimize(
     dataset=dataset,
     output_column='output',
     feedback_columns=['feedback']
 )
+
+print(optimized_prompt)
 ```
+
+### Advanced Usage
+
+#### Using Custom Evaluators
+
+You can run evaluators on your dataset before optimization:
+
+```python
+from prompt_learning import PromptLearningOptimizer
+
+optimizer = PromptLearningOptimizer(
+    prompt="Your prompt with {variables}",
+    model_choice="gpt-4o"
+)
+
+# Run evaluators first
+dataset, feedback_columns = optimizer.run_evaluators(
+    dataset=dataset,
+    evaluators=[your_custom_evaluator],
+    feedback_columns=["existing_feedback"]
+)
+
+# Then optimize
+optimized_prompt = optimizer.optimize(
+    dataset=dataset,
+    output_column='output',
+    feedback_columns=feedback_columns
+)
+```
+
+#### Using Annotations
+
+Generate detailed annotations to guide optimization:
+
+```python
+annotations = optimizer.create_annotation(
+    prompt=prompt,
+    template_variables=["query"],
+    dataset=dataset,
+    feedback_columns=["feedback"],
+    annotator_prompts=["Analyze why the model made errors and suggest improvements."],
+    output_column="output"
+)
+
+optimized_prompt = optimizer.optimize(
+    dataset=dataset,
+    output_column='output',
+    feedback_columns=['feedback'],
+    annotations=annotations
+)
+```
+
+#### Optimizing Rulesets
+
+For coding agents or complex systems, optimize dynamic rulesets instead of the full prompt:
+
+```python
+optimized_ruleset = optimizer.optimize(
+    dataset=dataset,
+    output_column='output',
+    feedback_columns=['feedback'],
+    ruleset="- Rule 1: Always check for edge cases\n- Rule 2: Validate inputs"
+)
+```
+
+### API Reference
+
+#### `PromptLearningOptimizer`
+
+**Constructor:**
+```python
+PromptLearningOptimizer(
+    prompt: Union[PromptVersion, str, List[Dict[str, str]]],
+    model_choice: str = "gpt-4",
+    openai_api_key: Optional[str] = None,
+    meta_prompt: Optional[str] = None,
+    rules_meta_prompt: Optional[str] = None,
+)
+```
+
+- `prompt`: The prompt to optimize. Can be a string, list of messages, or Phoenix PromptVersion.
+- `model_choice`: OpenAI model to use (default: "gpt-4")
+- `openai_api_key`: API key (or set via `OPENAI_API_KEY` env var)
+- `meta_prompt`: Custom meta-prompt template (optional)
+- `rules_meta_prompt`: Custom meta-prompt for ruleset optimization (optional)
+
+**Methods:**
+
+- `optimize(dataset, output_column, feedback_columns, ...)`: Optimize the prompt using feedback data
+- `run_evaluators(dataset, evaluators, feedback_columns)`: Run evaluators on the dataset
+- `create_annotation(...)`: Generate annotations for optimization guidance
 
 ## Contributing
 
