@@ -39,7 +39,6 @@ This feedback helps optimize prompts more precisely than a 2/5 rating ever could
 Install the `prompt-learning` package via pip:
 
 ```bash
-<<<<<<< Updated upstream
 pip install prompt-learning
 ```
 
@@ -49,9 +48,6 @@ Or install from source for development:
 git clone https://github.com/priyanjindal/prompt-learning.git
 cd prompt-learning
 pip install -e .
-=======
-pip install prompt-learn
->>>>>>> Stashed changes
 ```
 
 ## Environment Setup
@@ -376,7 +372,6 @@ from prompt_learning import PromptLearningOptimizer
 
 # Create dataset with English feedback
 dataset = pd.DataFrame({
-<<<<<<< Updated upstream
     'query': [
         "I can't log in to my account anymore",
         "My password reset email never arrived",
@@ -392,11 +387,6 @@ dataset = pd.DataFrame({
         "correct",
         "correct",
     ]
-=======
-    'input': ["Generate a tech company's career page"],
-    'output': ["{incorrect JSON output}"],
-    'feedback': ["Missing 'updatedAt' field; top-level key should be 'page'"]
->>>>>>> Stashed changes
 })
 
 # Define your prompt with template variables
@@ -423,7 +413,6 @@ optimized_prompt = optimizer.optimize(
 print(optimized_prompt)
 ```
 
-<<<<<<< Updated upstream
 ### Advanced Usage
 
 #### Using Custom Evaluators
@@ -516,58 +505,8 @@ PromptLearningOptimizer(
 - `create_annotation(...)`: Generate annotations for optimization guidance
 
 ## Contributing
-=======
-### With Google Provider and Cost Control
->>>>>>> Stashed changes
 
-```python
-from optimizer_sdk.prompt_learning_optimizer import PromptLearningOptimizer
-from providers.google_provider import GoogleProvider
-from core.pricing import PricingCalculator
-
-# Initialize with Google AI and budget control
-optimizer = PromptLearningOptimizer(
-    prompt="Analyze this customer feedback: {feedback}",
-    provider=GoogleProvider(),
-    pricing_calculator=PricingCalculator(),
-    budget_limit=5.00,
-    verbose=True
-)
-
-# Optimize
-optimized_prompt = optimizer.optimize(
-    dataset=dataset,
-    output_column="analysis",
-    feedback_columns=["quality_score", "accuracy_notes"]
-)
-
-# Check costs
-pricing = optimizer.pricing_calculator.get_usage_summary()
-print(f"Total cost: ${pricing['total_cost']:.4f}")
-print(f"Tokens used: {pricing['total_tokens']:,}")
-```
-
-### With Annotations
-
-```python
-# Create annotations for additional context
-annotations = optimizer.create_annotation(
-    prompt=baseline_prompt,
-    template_variables=["input"],
-    dataset=dataset,
-    feedback_columns=["feedback"],
-    annotator_prompts=["Summarize the common errors..."],
-    output_column="output"
-)
-
-# Use annotations in optimization
-optimized_prompt = optimizer.optimize(
-    dataset=dataset,
-    output_column="output",
-    feedback_columns=["feedback"],
-    annotations=annotations
-)
-```
+Contributions are welcome! Please open an issue or submit a pull request.
 
 ## Architecture
 

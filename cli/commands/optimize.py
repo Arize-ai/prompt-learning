@@ -27,14 +27,10 @@ from core.pricing import PricingCalculator
     "--feedback-columns",
     "-f",
     multiple=True,
-<<<<<<< Updated upstream
-    help="Column names containing feedback (can specify multiple)",
-=======
     callback=lambda ctx, param, value: [
         col.strip() for v in value for col in v.split(",") if col.strip()
     ],
     help="Column names containing feedback (comma-separated, or use -f multiple times)",
->>>>>>> Stashed changes
 )
 @click.option("--model", "-m", default="gpt-4", help="Model to use for optimization")
 @click.option(
