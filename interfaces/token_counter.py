@@ -5,10 +5,6 @@ Token counting interface - pure token counting without model validation.
 from abc import ABC, abstractmethod
 from typing import List
 import pandas as pd
-<<<<<<< Updated upstream
-=======
-import tiktoken
->>>>>>> Stashed changes
 
 
 class TokenCounter(ABC):
@@ -35,10 +31,7 @@ class TiktokenCounter(TokenCounter):
 
     def __init__(self, encoding_name: str = "cl100k_base"):
         """Initialize with a specific tiktoken encoding."""
-<<<<<<< Updated upstream
         import tiktoken
-=======
->>>>>>> Stashed changes
 
         self.encoder = tiktoken.get_encoding(encoding_name)
 
