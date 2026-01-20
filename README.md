@@ -39,7 +39,6 @@ This feedback helps optimize prompts more precisely than a 2/5 rating ever could
 Install the `prompt-learning` package via pip:
 
 ```bash
-<<<<<<< Updated upstream
 pip install prompt-learning
 ```
 
