@@ -1,6 +1,6 @@
 # Prompt Learning: Optimize LLM Prompts with Natural Language Feedback
 
-A production-ready SDK and CLI for optimizing LLM prompts using natural language feedback instead of numerical scores. Supports OpenAI and Google AI providers with built-in cost management.
+SDK and CLI for optimizing LLM prompts using natural language feedback instead of numerical scores. Supports OpenAI and Google AI providers with built-in cost management.
 
 ## What Is Prompt Learning?
 
@@ -13,36 +13,16 @@ Instead of tuning model weights, prompt learning continuously improves agent beh
 Prompt learning uses a three-model loop:
 
 1. **Agent**: Executes the task using the current prompt
-2. **Evaluator**: Identifies failures and generates textual feedback
-3. **Optimizer**: Revises the prompt based on that feedback
+2. **Evaluator**: Uses LLM to identify failures and generate textual feedback
+3. **Meta Prompt**: Uses LLM to revises the prompt based on that feedback
 
 This loop enables agents to **self-improve** through failure, learning in the same way humans do—by adjusting instructions rather than rewiring behavior.
 
-### English Error Terms
-
-Rather than numeric metrics, prompt learning relies on English critiques:
-
-> *"Missing 'updatedAt' field; section types must use the allowed vocabulary; top-level key should be 'page'."*
-
-This feedback helps optimize prompts more precisely than a 2/5 rating ever could.
-
-### Key Contributions
-
-- **English Error Terms**: Natural language feedback instead of numerical scores
-- **Online Prompt Management**: Continuous improvement system designed for production
-- **Single-Loop Success**: Powerful prompt improvements in just one optimization loop
-- **Cost Efficiency**: Low latency, achieving strong results in minutes rather than hours
-- **SOTA Results**: Successful results on popular benchmarks like Big Bench Hard
+<img width="1115" height="492" alt="Screenshot 2025-10-10 at 2 13 53 PM" src="https://github.com/user-attachments/assets/e0d40ba6-f7ce-41a3-8c0b-83f0618744d0" />
 
 ## Installation
 
-Install the `prompt-learning` package via pip:
-
-```bash
-pip install prompt-learning
-```
-
-Or install from source for development:
+Install the `prompt-learning` package:
 
 ```bash
 git clone https://github.com/priyanjindal/prompt-learning.git
@@ -63,34 +43,6 @@ export GOOGLE_API_KEY="your-google-key"
 # or
 export GEMINI_API_KEY="your-google-key"
 ```
-
-## Providers
-
-Prompt Learning supports two AI providers:
-
-### OpenAI (Default)
-
-The default provider uses OpenAI's GPT models with accurate tiktoken-based token counting.
-
-| Model | Best For |
-|-------|----------|
-| `gpt-4` | Highest quality optimization |
-| `gpt-4-turbo` | Balance of quality and cost |
-| `gpt-3.5-turbo` | Fast, cost-effective optimization |
-
-### Google AI
-
-Google's Gemini models offer competitive performance at lower costs, with additional features like search grounding.
-
-| Model | Best For |
-|-------|----------|
-| `gemini-2.5-flash` | Fast, cost-effective optimization |
-| `gemini-2.5-pro` | Higher quality responses |
-| `gemini-2.5-flash-image` | Image generation |
-
-**Google-specific features:**
-- Google Search grounding for fact-based responses
-- Image generation via "nano banana" models
 
 ## CLI Reference
 
@@ -231,39 +183,6 @@ input,output,feedback
 "Generate a product landing page","{ ""hero"": [...] }","Correct format; consider adding 'testimonials' section for completeness"
 ```
 
-### Why Feedback Columns Are Required
-
-The optimizer needs feedback to understand:
-- What patterns lead to failures
-- What rules or guidelines are being violated
-- How outputs should be improved
-
-Without feedback, the optimizer has no signal to improve the prompt.
-
-### Multiple Feedback Columns
-
-You can provide multiple types of feedback using comma-separated values:
-
-```bash
-prompt-learn optimize \
-  --prompt "Your prompt" \
-  --dataset data.csv \
-  --output-column output \
-  --feedback-columns structural_errors,style_feedback,rule_violations
-```
-
-Or by specifying `-f` multiple times:
-
-```bash
-prompt-learn optimize \
-  --prompt "Your prompt" \
-  --dataset data.csv \
-  --output-column output \
-  -f structural_errors -f style_feedback -f rule_violations
-```
-
-All feedback columns are combined to provide richer context for optimization.
-
 ## Built-in Evaluators
 
 ### SDK Evaluators
@@ -312,32 +231,8 @@ The image evaluator uses Gemini vision to assess:
 - **Artistic appeal**: Aesthetic value, creativity
 - **Consistency**: Similarity across multiple generations
 
-## Token Estimation and Cost Management
 
-### Token Counting
-
-Prompt Learning uses intelligent token counting based on your provider:
-
-| Provider | Counter | Method |
-|----------|---------|--------|
-| OpenAI | `TiktokenCounter` | Accurate encoding-based counting |
-| Google | `ApproximateCounter` | Fast estimation (~characters/4) |
-
-### Budget Enforcement
-
-Set a maximum budget to prevent unexpected costs:
-
-```bash
-# Default $5 budget
-prompt-learn optimize -p "..." -d data.csv -f feedback
-
-# Custom $15 budget for large datasets
-prompt-learn optimize -p "..." -d large_data.csv -f feedback --budget 15.00
-```
-
-The optimizer will automatically stop before exceeding your budget limit.
-
-### Cost Tracking
+## Cost Tracking
 
 Use verbose mode to see real-time cost information:
 
@@ -349,18 +244,6 @@ Output includes:
 - Per-batch cost estimates
 - Running total cost
 - Budget remaining
-
-### Pricing Reference
-
-Built-in pricing for supported models (per 1,000 tokens):
-
-| Model | Input Cost | Output Cost |
-|-------|------------|-------------|
-| gpt-4 | $0.030 | $0.060 |
-| gpt-4-turbo | $0.010 | $0.030 |
-| gpt-3.5-turbo | $0.0015 | $0.002 |
-| gemini-2.5-flash | $0.0003 | $0.0025 |
-| gemini-2.5-pro | $0.00125 | $0.010 |
 
 ## SDK Usage
 
