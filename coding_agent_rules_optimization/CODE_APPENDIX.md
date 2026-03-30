@@ -1,11 +1,11 @@
 # Code Appendix
 
-This document provides an overview of key functions in the Cline codebase to help navigate the implementation. For full details, refer to the source files.
+This document provides an overview of key functions in the codebase to help navigate the implementation. For full details, refer to the source files.
 
 ## Core Functions
 
 ### `run_act()`
-**Location:** `act_mode/run_act.py`
+**Location:** `cline/act_mode/run_act.py`
 
 **Purpose:** Orchestrates Cline Act Mode evaluation on SWE-bench datasets.
 
@@ -27,7 +27,7 @@ This document provides an overview of key functions in the Cline codebase to hel
 ---
 
 ### `act_one()`
-**Location:** `act_mode/run_act.py`
+**Location:** `cline/act_mode/run_act.py`
 
 **Purpose:** Processes a single SWE-bench instance with Cline in Act Mode.
 
@@ -45,7 +45,7 @@ This document provides an overview of key functions in the Cline codebase to hel
 ---
 
 ### `run_cline_for_instance()`
-**Location:** `cline_helpers.py`
+**Location:** `cline/cline_helpers.py`
 
 **Purpose:** Low-level function to execute Cline on a single instance with full environment setup.
 
@@ -71,14 +71,14 @@ This document provides an overview of key functions in the Cline codebase to hel
 ---
 
 ### `evaluate_results()`
-**Location:** `act_mode/evals_act.py`
+**Location:** `evals.py`
 
-**Purpose:** Generates qualitative evaluations of Cline's outputs using LLM-as-judge.
+**Purpose:** Generates qualitative evaluations of coding agent outputs using LLM-as-judge.
 
 **Key Responsibilities:**
 - Filters out excessively large patches (>200k chars) to avoid API limits
-- Constructs evaluation prompt with problem statement, ground truth, test patch, Cline's patch, and pass/fail status
-- Uses Phoenix `llm_generate()` with GPT-4o to assess correctness and reasoning
+- Constructs evaluation prompt with problem statement, ground truth, test patch, agent's patch, and pass/fail status
+- Uses Phoenix evaluators with GPT to assess correctness and reasoning
 - Parses JSON responses to extract correctness and explanation
 - Augments results DataFrame with `correctness` and `explanation` columns
 
@@ -140,18 +140,29 @@ This document provides an overview of key functions in the Cline codebase to hel
 
 ## File Organization
 
+### Shared (root level)
+- `constants.py` - Paths, prompts, and model configuration
+- `container_helpers.py` - Docker container lifecycle management
+- `evals.py` - LLM-as-judge evaluation (shared across agents)
+- `phoenix_experiments.py` - Phoenix experiment logging via REST API
+
+### Cline (`cline/`)
 - `cline_helpers.py` - Low-level utilities for Cline execution and Docker management
 - `act_mode/run_act.py` - High-level Act Mode evaluation orchestration
-- `act_mode/evals_act.py` - LLM-based qualitative evaluation
-- `plan_mode/` - Similar structure for Plan Mode (not detailed here)
-- `optimizer_sdk/prompt_learning_optimizer.py` - Core Prompt Learning algorithm
+- `act_mode/main.py` - Act Mode optimization loop
+- `plan_mode/` - Similar structure for Plan Mode
 - `act_mode/optimize_cline_act_*.ipynb` - End-to-end optimization notebooks
+
+### Claude Code (`claude_code/`)
+- `claude_code_helpers.py` - Core helper functions for running Claude Code CLI
+- `run_claude.py` - Parallel execution of Claude Code on SWE-bench
+- `optimize_claude_code.py` - Automated optimization loop
+- `test_claude_code.py` / `test_run_claude.py` - Test suites
 
 ---
 
 ## Additional Resources
 
-- See `README.md` for setup instructions and environment configuration
-- See notebooks in `act_mode/` for complete usage examples
-- Logs stored in `act_mode/logs/run_evaluation/<run_id>/` for debugging
-
+- See `SETUP_SWEBENCH.md` for setup instructions and environment configuration
+- See notebooks in `cline/act_mode/` for complete Cline usage examples
+- Logs stored in `cline/act_mode/logs/run_evaluation/<run_id>/` for debugging

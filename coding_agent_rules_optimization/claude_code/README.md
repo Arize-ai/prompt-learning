@@ -13,9 +13,9 @@ This directory contains tools for optimizing Claude Code CLI on SWE-bench using 
 ## Other Files
 
 - **`run_claude.py`** - Parallel execution of Claude Code on SWE-bench datasets
-- **`claude_code_helpers.py`** - Core helper functions for running Claude Code
+- **`claude_code_helpers.py`** - Core helper functions for running Claude Code (uses `../container_helpers.py` for Docker management)
 - **`test_claude_code.py`** - Test suite for validating the integration
-- **`evals.py`** - Evaluation functions for assessing Claude Code outputs
+- **`../evals.py`** - Evaluation functions for assessing Claude Code outputs (shared)
 
 ## Setup
 

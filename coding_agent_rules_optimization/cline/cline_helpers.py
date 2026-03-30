@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import cast
 import shutil
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 from container_helpers import (
     materialize_repo_from_image,
     start_bound_container,

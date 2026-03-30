@@ -1,7 +1,7 @@
 import os
 
 # Paths
-CLINE_REPO_PATH = os.path.expanduser("~/cline-1")
+CLINE_REPO_PATH = os.path.expanduser("~/cline")
 MATERIALIZED_REPOS_PATH = os.path.expanduser("~/materialized_repos")
 
 # Delimiters for template variables

@@ -20,6 +20,7 @@ import docker
 import random
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 
 from cline_helpers import run_cline_for_instance
 from constants import CLINE_REPO_PATH, MATERIALIZED_REPOS_PATH

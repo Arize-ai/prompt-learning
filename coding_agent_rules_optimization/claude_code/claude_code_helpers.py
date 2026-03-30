@@ -1,6 +1,9 @@
 import os
 import subprocess
+import sys
 from pathlib import Path
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from container_helpers import (
     materialize_repo_from_image,

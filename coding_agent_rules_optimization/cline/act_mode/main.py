@@ -6,10 +6,10 @@ import os
 import sys
 import subprocess
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../.."))
 from optimizer_sdk.prompt_learning_optimizer import PromptLearningOptimizer
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 from constants import CLINE_PROMPT
 
 import pandas as pd

@@ -10,7 +10,6 @@ from swebench.harness.utils import load_swebench_dataset
 from swebench.harness.test_spec.test_spec import make_test_spec
 import random
 
-# Add parent directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from claude_code_helpers import run_claude_for_instance
