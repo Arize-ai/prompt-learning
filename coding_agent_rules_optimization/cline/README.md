@@ -2,9 +2,11 @@
 
 This folder contains the harness for running Cline (in Plan/Act modes) against SWE-bench instances.
 
+> **Before you start:** Complete the shared SWE-bench setup in [`SETUP_SWEBENCH.md`](../SETUP_SWEBENCH.md) first.
+
 ## Prerequisites
 
-In addition to the [shared setup](../SETUP_SWEBENCH.md):
+In addition to the shared setup above:
 
 - Node.js
 - npx + tsx available (`npx tsx`)

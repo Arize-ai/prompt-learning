@@ -2,6 +2,8 @@
 
 This directory contains tools for optimizing Claude Code CLI on SWE-bench using prompt learning.
 
+> **Before you start:** Complete the shared SWE-bench setup in [`SETUP_SWEBENCH.md`](../SETUP_SWEBENCH.md) first.
+
 ## Main Script
 
 **`optimize_claude_code.py`** - Automated optimization loop that:
