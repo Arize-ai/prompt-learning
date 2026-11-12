@@ -53,11 +53,11 @@ class Annotator:
             current_example = f"""\n
                 Example {str(ind)}
 
-                Input: {[row_dict[temp_var] for temp_var in template_variables]}
+                Input: {[row_dict.get(temp_var, 'N/A') for temp_var in template_variables]}
 
                 Output: {output_value}
 
-                Ground Truth: {row_dict.get('ground_truth', 'N/A')}
+                Ground Truth: {ground_truth_value}
 
                 Feedback:
             """
