@@ -52,7 +52,7 @@ class MetaPrompt:
                 current_example = f"""\n
                     Example {str(ind)}
 
-                    Data for baseline prompt: {[row_dict[temp_var] for temp_var in template_variables]}
+                    Data for baseline prompt: {[row_dict.get(temp_var, 'N/A') for temp_var in template_variables]}
 
                     LLM Output using baseline prompt: {output_value}
 
@@ -79,10 +79,7 @@ class MetaPrompt:
             examples += current_example
         content = content.replace("{examples}", examples)
 
-        if annotations:
-            content = content.replace("{annotations}", "\n".join(annotations))
-        with open("metaprompt.txt", "w") as f:
-            f.write(content)
+        content = content.replace("{annotations}", "\n".join(annotations or []))
         return content
 
     def format_template_with_vars(

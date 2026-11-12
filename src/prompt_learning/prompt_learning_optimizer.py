@@ -4,7 +4,6 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 from phoenix.client.types import PromptVersion
-from phoenix.evals.models import OpenAIModel
 
 from .meta_prompt import MetaPrompt
 from .tiktoken_splitter import TiktokenSplitter

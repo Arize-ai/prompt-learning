@@ -7,7 +7,6 @@ _TEMPLATE_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
 
 import pandas as pd
 from phoenix.client.types import PromptVersion
-from phoenix.evals.models import OpenAIModel
 
 from .meta_prompt import MetaPrompt
 from core.dataset_splitter import DatasetSplitter
@@ -42,7 +41,7 @@ class PromptLearningOptimizer:
                 output_column: Name of the column containing LLM outputs from the dataset
                 evaluators: List of Phoenix evaluators to run on the dataset - see https://arize.com/docs/phoenix/evaluation/how-to-evals (default: [])
                 feedback_columns: List of column names containing existing feedback from the dataset (required if not using new evaluations)
-                context_size_k: Context window size in thousands of tokens (default: 8k)
+                context_size_k: Context window size in tokens (default: 128000)
                 evaluate: Whether to run evaluators on the dataset (default: True)
                 meta_prompt: Meta-prompt to use for optimization (default: our default meta-prompt)
                 rules_meta_prompt: Meta-prompt to use for optimization with ruleset (default: our default meta-prompt for ruleset)
@@ -134,8 +133,8 @@ class PromptLearningOptimizer:
     def _validate_inputs(
         self,
         dataset: pd.DataFrame,
-        feedback_columns: List[str] = [],
-        evaluators: List[Callable] = [],
+        feedback_columns: Optional[List[str]] = None,
+        evaluators: Optional[List[Callable]] = None,
         output_column: Optional[str] = None,
         output_required: bool = False,
     ):
@@ -195,7 +194,7 @@ class PromptLearningOptimizer:
         self,
         dataset: Union[pd.DataFrame, str],
         evaluators: List[Callable],
-        feedback_columns: List[str] = [],
+        feedback_columns: Optional[List[str]] = None,
     ) -> Tuple[pd.DataFrame, List[str]]:
         """
         Run evaluators on the dataset and add results to feedback columns
@@ -204,6 +203,8 @@ class PromptLearningOptimizer:
             DataFrame with evaluator results added
         """
         dataset = self._load_dataset(dataset)
+        # Copy so the caller's list (and a shared default) is never mutated
+        feedback_columns = list(feedback_columns or [])
         self._validate_inputs(dataset, feedback_columns, evaluators)
 
         if self.verbose:
@@ -213,7 +214,8 @@ class PromptLearningOptimizer:
                 feedback_data, column_names = evaluator(dataset)
                 for column_name in column_names:
                     dataset[column_name] = feedback_data[column_name]
-                    feedback_columns.append(column_name)
+                    if column_name not in feedback_columns:
+                        feedback_columns.append(column_name)
                 if self.verbose:
                     print(f"Evaluator {i + 1}: {column_name}")
             except Exception as e:
@@ -242,7 +244,7 @@ class PromptLearningOptimizer:
         for i, annotator_prompt in enumerate(annotator_prompts):
             try:
                 annotator = Annotator(annotator_prompt)
-                prompt = annotator.construct_content(
+                content = annotator.construct_content(
                     dataset,
                     prompt,
                     template_variables,
@@ -250,7 +252,7 @@ class PromptLearningOptimizer:
                     output_column,
                     ground_truth_column,
                 )
-                annotation = annotator.generate_annotation(prompt)
+                annotation = annotator.generate_annotation(content)
                 annotations.append(annotation)
             except Exception as e:
                 print(f"Annotator {i + 1} failed: {e}")
@@ -260,8 +262,8 @@ class PromptLearningOptimizer:
         self,
         dataset: Union[pd.DataFrame, str],
         output_column: str,
-        evaluators: List[Callable] = [],
-        feedback_columns: List[str] = [],
+        evaluators: Optional[List[Callable]] = None,
+        feedback_columns: Optional[List[str]] = None,
         annotations: List[str] | None = None,
         ruleset: str | None = None,
         context_size_k: int = 128000,
@@ -274,7 +276,7 @@ class PromptLearningOptimizer:
             output_column: Name of the column containing LLM outputs from the dataset
             feedback_columns: List of column names containing existing feedback from the dataset (required if not using new evaluations)
             evaluators: List of Phoenix evaluators to run on the dataset - see https://arize.com/docs/phoenix/evaluation/how-to-evals (default: [])
-            context_size_k: Context window size in thousands of tokens (default: 8k)
+            context_size_k: Context window size in tokens (default: 128000)
 
         Returns:
             Optimized prompt in the same format as the input prompt
@@ -282,6 +284,8 @@ class PromptLearningOptimizer:
         # Run evaluators if provided
 
         dataset = self._load_dataset(dataset)
+        feedback_columns = list(feedback_columns or [])
+        evaluators = list(evaluators or [])
         self._validate_inputs(
             dataset, feedback_columns, evaluators, output_column, output_required=True
         )
