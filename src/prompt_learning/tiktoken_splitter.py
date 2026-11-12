@@ -50,7 +50,9 @@ class TiktokenSplitter:
         if model.startswith("gpt-4.1"):
             model = "gpt-4"
         if model not in SUPPORTED_MODELS:
-            raise ValueError(f"Model {model} not supported. Supported models: {SUPPORTED_MODELS}")
+            raise ValueError(
+                f"Model {model} not supported. Supported models: {SUPPORTED_MODELS}"
+            )
 
         self.tiktoken_encoder = tiktoken.encoding_for_model(model)
 
@@ -62,7 +64,9 @@ class TiktokenSplitter:
         text_str = str(text)
         return len(self.tiktoken_encoder.encode(text_str))
 
-    def _count_row_tokens(self, df: pd.DataFrame, columns: List[str], row_idx: int) -> int:
+    def _count_row_tokens(
+        self, df: pd.DataFrame, columns: List[str], row_idx: int
+    ) -> int:
         """Count total tokens for a specific row across selected columns."""
         row = df.iloc[row_idx]
         total_tokens = 0
@@ -125,7 +129,9 @@ class TiktokenSplitter:
 
         return batches
 
-    def get_batch_dataframes(self, df: pd.DataFrame, columns: List[str], context_size_tokens: int) -> List[pd.DataFrame]:
+    def get_batch_dataframes(
+        self, df: pd.DataFrame, columns: List[str], context_size_tokens: int
+    ) -> List[pd.DataFrame]:
         """
         Get list of dataframe batches that fit within context window.
 

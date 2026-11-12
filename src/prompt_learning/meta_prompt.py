@@ -2,13 +2,23 @@ from typing import List, Mapping, Union
 
 import pandas as pd
 
-from .constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM, CODING_AGENT_META_PROMPT_TEMPLATE
+from .constants import (
+    END_DELIM,
+    META_PROMPT_TEMPLATE,
+    START_DELIM,
+    CODING_AGENT_META_PROMPT_TEMPLATE,
+)
 
 
 class MetaPrompt:
-    def __init__(self, meta_prompt: str = META_PROMPT_TEMPLATE, rules_meta_prompt: str = CODING_AGENT_META_PROMPT_TEMPLATE):
+    def __init__(
+        self,
+        meta_prompt: str = META_PROMPT_TEMPLATE,
+        rules_meta_prompt: str = CODING_AGENT_META_PROMPT_TEMPLATE,
+    ):
         self.meta_prompt = meta_prompt
         self.rules_meta_prompt = rules_meta_prompt
+
     def construct_content(
         self,
         batch_df: pd.DataFrame,
@@ -33,7 +43,9 @@ class MetaPrompt:
             row_dict = row.to_dict()
             output_value = row_dict[output_column]
             if output_value is not None and isinstance(output_value, str):
-                output_value = output_value.replace(START_DELIM, " ").replace(END_DELIM, " ")
+                output_value = output_value.replace(START_DELIM, " ").replace(
+                    END_DELIM, " "
+                )
             else:
                 output_value = "None"
             if ruleset is None:
@@ -58,7 +70,9 @@ class MetaPrompt:
                 if feedback_value is not None:
                     # Cast to string to handle integers and other types
                     feedback_value = str(feedback_value)
-                    feedback_value = feedback_value.replace(START_DELIM, " ").replace(END_DELIM, " ")
+                    feedback_value = feedback_value.replace(START_DELIM, " ").replace(
+                        END_DELIM, " "
+                    )
                 else:
                     feedback_value = "None"
                 current_example += f"\n{feedback_column}: {feedback_value}"

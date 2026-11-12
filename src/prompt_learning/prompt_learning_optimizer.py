@@ -11,6 +11,7 @@ from .utils import get_key_value
 from .annotator import Annotator
 from openai import OpenAI
 
+
 class PromptLearningOptimizer:
     """
     PromptLearningOptimizer is a class that optimizes a prompt using the meta-prompt approach.
@@ -85,9 +86,9 @@ class PromptLearningOptimizer:
         # Only pass arguments if they're not None to allow MetaPrompt defaults to be used
         meta_prompt_kwargs = {}
         if meta_prompt is not None:
-            meta_prompt_kwargs['meta_prompt'] = meta_prompt
+            meta_prompt_kwargs["meta_prompt"] = meta_prompt
         if rules_meta_prompt is not None:
-            meta_prompt_kwargs['rules_meta_prompt'] = rules_meta_prompt
+            meta_prompt_kwargs["rules_meta_prompt"] = rules_meta_prompt
         self.meta_prompter = MetaPrompt(**meta_prompt_kwargs)
 
     def _load_dataset(self, dataset: Union[pd.DataFrame, str]) -> pd.DataFrame:
@@ -112,7 +113,10 @@ class PromptLearningOptimizer:
         """Validate that we have the necessary inputs for optimization"""
         # Check if we have either feedback columns or evaluators
         if not feedback_columns and not evaluators:
-            raise ValueError("Either feedback_columns or evaluators must be provided. " "Need some feedback for MetaPrompt optimization.")
+            raise ValueError(
+                "Either feedback_columns or evaluators must be provided. "
+                "Need some feedback for MetaPrompt optimization."
+            )
 
         # Validate dataset has required columns
         required_columns = []
@@ -123,7 +127,9 @@ class PromptLearningOptimizer:
         if feedback_columns:
             required_columns.extend(feedback_columns)
 
-        missing_columns = [col for col in required_columns if col not in dataset.columns]
+        missing_columns = [
+            col for col in required_columns if col not in dataset.columns
+        ]
         if missing_columns:
             raise ValueError(f"Dataset missing required columns: {missing_columns}")
 
@@ -133,22 +139,24 @@ class PromptLearningOptimizer:
             # Extract messages from PromptVersion template
             template = self.prompt._template
             if template["type"] == "chat":
-                messages = template["messages"] # type: ignore
+                messages = template["messages"]  # type: ignore
             else:
                 raise ValueError("Only chat templates are supported")
             for message in messages:
                 if message["role"] == "system":
-                    return message["content"] # type: ignore
+                    return message["content"]  # type: ignore
             raise ValueError("No system prompt found in the prompt")
         elif isinstance(self.prompt, list):
-            for message in self.prompt: # type: ignore
+            for message in self.prompt:  # type: ignore
                 if message["role"] == "system":
-                    return message["content"] # type: ignore
+                    return message["content"]  # type: ignore
             raise ValueError("No system prompt found in the prompt")
         elif isinstance(self.prompt, str):
             return self.prompt
         else:
-            raise ValueError("Prompt must be either a PromptVersion object, list of messages, or string")
+            raise ValueError(
+                "Prompt must be either a PromptVersion object, list of messages, or string"
+            )
 
     def _detect_template_variables(self, prompt_content: str) -> list[str]:
         _TEMPLATE_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
@@ -182,10 +190,10 @@ class PromptLearningOptimizer:
                 print(f"   ⚠️  Evaluator {i + 1} failed: {e}")
 
         return dataset, feedback_columns
-    
+
     def create_annotation(
         self,
-        prompt: str, 
+        prompt: str,
         template_variables: List[str],
         dataset: Union[pd.DataFrame, str],
         feedback_columns: List[str],
@@ -203,13 +211,19 @@ class PromptLearningOptimizer:
         for i, annotator_prompt in enumerate(annotator_prompts):
             try:
                 annotator = Annotator(annotator_prompt)
-                prompt = annotator.construct_content(dataset, prompt, template_variables, feedback_columns, output_column, ground_truth_column)
+                prompt = annotator.construct_content(
+                    dataset,
+                    prompt,
+                    template_variables,
+                    feedback_columns,
+                    output_column,
+                    ground_truth_column,
+                )
                 annotation = annotator.generate_annotation(prompt)
                 annotations.append(annotation)
             except Exception as e:
                 print(f"   ⚠️  Annotator {i + 1} failed: {e}")
         return annotations
-
 
     def optimize(
         self,
@@ -235,12 +249,16 @@ class PromptLearningOptimizer:
             Optimized prompt in the same format as the input prompt
         """
         # Run evaluators if provided
-        
+
         dataset = self._load_dataset(dataset)
-        self._validate_inputs(dataset, feedback_columns, evaluators, output_column, output_required=True)
+        self._validate_inputs(
+            dataset, feedback_columns, evaluators, output_column, output_required=True
+        )
         if evaluators:
-            dataset, feedback_columns = self.run_evaluators(dataset, evaluators, feedback_columns)
-        
+            dataset, feedback_columns = self.run_evaluators(
+                dataset, evaluators, feedback_columns
+            )
+
         # Extract prompt content
         prompt_content = self._extract_system_prompt()
         # Auto-detect template variables
@@ -256,9 +274,13 @@ class PromptLearningOptimizer:
 
         # Create batches based on token count
         context_size_tokens = context_size_k
-        batch_dataframes = splitter.get_batch_dataframes(dataset, columns_to_count, context_size_tokens)
+        batch_dataframes = splitter.get_batch_dataframes(
+            dataset, columns_to_count, context_size_tokens
+        )
 
-        print(f"📊 Processing {len(dataset)} examples in {len(batch_dataframes)} batches")
+        print(
+            f"📊 Processing {len(dataset)} examples in {len(batch_dataframes)} batches"
+        )
 
         # Process dataset in batches
         optimized_prompt_content = prompt_content
@@ -303,7 +325,9 @@ class PromptLearningOptimizer:
         optimized_prompt = self._create_optimized_prompt(optimized_prompt_content)
         return optimized_prompt
 
-    def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, Sequence, str]:
+    def _create_optimized_prompt(
+        self, optimized_content: str
+    ) -> Union[PromptVersion, Sequence, str]:
         """Create optimized prompt in the same format as input"""
 
         if isinstance(self.prompt, PromptVersion):
@@ -323,7 +347,7 @@ class PromptLearningOptimizer:
             )
 
         elif isinstance(self.prompt, list):
-            optimized_messages = copy.deepcopy(self.prompt) # type: ignore
+            optimized_messages = copy.deepcopy(self.prompt)  # type: ignore
 
             for i, message in enumerate(optimized_messages):
                 if message["role"] == "system":
@@ -336,4 +360,6 @@ class PromptLearningOptimizer:
             return optimized_content
 
         else:
-            raise ValueError("Prompt must be either a PromptVersion object or list of messages or string")
+            raise ValueError(
+                "Prompt must be either a PromptVersion object or list of messages or string"
+            )

@@ -34,7 +34,9 @@ def test_run_evaluators_does_not_mutate_caller_list():
     caller_columns = ["correctness"]
 
     _, columns = optimizer.run_evaluators(_dataset(), [_evaluator], caller_columns)
-    _, columns_again = optimizer.run_evaluators(_dataset(), [_evaluator], caller_columns)
+    _, columns_again = optimizer.run_evaluators(
+        _dataset(), [_evaluator], caller_columns
+    )
 
     assert caller_columns == ["correctness"]
     assert columns == ["correctness", "score"]
@@ -99,7 +101,9 @@ def test_create_annotation_gives_each_annotator_the_original_prompt():
     sent = []
 
     with patch.object(
-        Annotator, "generate_annotation", side_effect=lambda content: sent.append(content) or "note"
+        Annotator,
+        "generate_annotation",
+        side_effect=lambda content: sent.append(content) or "note",
     ):
         annotations = optimizer.create_annotation(
             prompt="BASELINE",
