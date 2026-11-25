@@ -2,6 +2,8 @@
 Unit tests for CLI main module.
 """
 
+from pathlib import Path
+
 import pytest
 from click.testing import CliRunner
 from cli.main import cli
@@ -52,6 +54,26 @@ class TestCLIMain:
 
         assert result.exit_code == 0
         assert "Test image generation prompts with nano banana" in result.output
+
+    def test_optimize_rejects_empty_csv(self):
+        dataset = Path(__file__).resolve().parents[1] / "fixtures" / "empty.csv"
+        result = CliRunner().invoke(
+            cli, ["optimize", "-p", "Summarize", "-d", str(dataset)]
+        )
+
+        assert "Dataset error: No columns to parse from file" in result.output
+        assert result.exit_code == 1
+
+    def test_optimize_rejects_missing_google_api_key(self):
+        dataset = Path(__file__).resolve().parents[1] / "fixtures" / "test_data.csv"
+        result = CliRunner().invoke(
+            cli,
+            ["optimize", "-p", "Summarize", "-d", str(dataset), "--provider", "google"],
+            env={"GOOGLE_API_KEY": None, "GEMINI_API_KEY": None},
+        )
+
+        assert "Provider error: Google API key required" in result.output
+        assert result.exit_code == 1
 
     def test_invalid_command(self):
         """Test that invalid command shows error."""
