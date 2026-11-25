@@ -108,11 +108,9 @@ def optimize(
             print(f"Dataset columns: {list(df.columns)}")
 
     except (DatasetError, FileNotFoundError, pd.errors.EmptyDataError) as e:
-        print(f"Dataset error: {e}")
-        return
+        raise click.ClickException(f"Dataset error: {e}") from e
     except Exception as e:
-        print(f"Unexpected error loading dataset: {e}")
-        return
+        raise click.ClickException(f"Unexpected error loading dataset: {e}") from e
 
     # Initialize optimizer
     try:
@@ -137,11 +135,9 @@ def optimize(
             print("Optimizer initialized")
 
     except (ProviderError, ValueError) as e:
-        print(f"Provider error: {e}")
-        return
+        raise click.ClickException(f"Provider error: {e}") from e
     except Exception as e:
-        print(f"Unexpected error initializing optimizer: {e}")
-        return
+        raise click.ClickException(f"Unexpected error initializing optimizer: {e}") from e
 
     # Run optimization
     try:
@@ -182,8 +178,6 @@ def optimize(
             print(f"Saved optimized prompt to {save}")
 
     except (DatasetError, OptimizationError, ProviderError) as e:
-        print(f"Optimization error: {e}")
-        return
+        raise click.ClickException(f"Optimization error: {e}") from e
     except Exception as e:
-        print(f"Unexpected error during optimization: {e}")
-        return
+        raise click.ClickException(f"Unexpected error during optimization: {e}") from e
