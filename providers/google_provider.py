@@ -157,4 +157,4 @@ class GoogleProvider(ModelProvider):
             return f"Generated {len(generated_images)} image(s)"
 
         except Exception as e:
-            return f"Error generating image: {e}"
+            raise ProviderError(f"Google image generation failed: {e}") from e

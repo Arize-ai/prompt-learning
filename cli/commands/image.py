@@ -131,4 +131,4 @@ def image(prompt, provider, iterations, output_dir, evaluate, budget):
             print(f"Provider {provider} not supported yet")
 
     except Exception as e:
-        print(f"Error during image generation: {e}")
+        raise click.ClickException(f"Error during image generation: {e}") from e
