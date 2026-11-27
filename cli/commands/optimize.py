@@ -32,7 +32,7 @@ from core.pricing import PricingCalculator
     ],
     help="Column names containing feedback (comma-separated, or use -f multiple times)",
 )
-@click.option("--model", "-m", default="gpt-4", help="Model to use for optimization")
+@click.option("--model", "-m", default="gpt-5.6-sol", help="Model to use for optimization")
 @click.option(
     "--provider",
     default="openai",

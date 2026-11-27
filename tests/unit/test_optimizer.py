@@ -21,9 +21,28 @@ class TestPromptLearningOptimizer:
         )
 
         assert optimizer.prompt == "Test prompt"
-        assert optimizer.model_choice == "gpt-4"
+        assert optimizer.model_choice == "gpt-5.6-sol"
         assert optimizer.verbose is False
         assert optimizer.budget_limit == 5.0
+
+    @patch("optimizer_sdk.prompt_learning_optimizer.OpenAI")
+    def test_default_model_is_sent_to_openai(self, mock_openai):
+        """The default model reaches the OpenAI chat completions call."""
+        create = mock_openai.return_value.chat.completions.create
+        create.return_value.choices = [Mock(message=Mock(content="Better {input}"))]
+        optimizer = PromptLearningOptimizer(
+            prompt="Answer {input}", openai_api_key="test_key"
+        )
+
+        optimizer.optimize(
+            dataset=pd.DataFrame(
+                {"input": ["q"], "output": ["a"], "feedback": ["good"]}
+            ),
+            output_column="output",
+            feedback_columns=["feedback"],
+        )
+
+        assert create.call_args.kwargs["model"] == "gpt-5.6-sol"
 
     def test_init_with_custom_settings(self):
         """Test optimizer initialization with custom settings."""

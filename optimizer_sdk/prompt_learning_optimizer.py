@@ -24,7 +24,7 @@ class PromptLearningOptimizer:
 
     Args:
         prompt: Either a PromptVersion object or a string representing the user prompt
-        model_choice: OpenAI model to use for optimization - currently only supports OpenAI models (default: "gpt-4")
+        model_choice: OpenAI model to use for optimization - currently only supports OpenAI models (default: "gpt-5.6-sol")
         openai_api_key: OpenAI API key for optimization. Can also be set via OPENAI_API_KEY environment variable.
 
     Methods:
@@ -58,7 +58,7 @@ class PromptLearningOptimizer:
 
         optimizer = PromptLearningOptimizer(
             prompt="You are a helpful assistant. Answer this question: {question}",
-            model_choice="gpt-4",
+            model_choice="gpt-5.6-sol",
         )
 
         dataset = pd.DataFrame({
@@ -79,7 +79,7 @@ class PromptLearningOptimizer:
     def __init__(
         self,
         prompt: Union[PromptVersion, str, List[Dict[str, str]]],
-        model_choice: str = "gpt-4",
+        model_choice: str = "gpt-5.6-sol",
         openai_api_key: Optional[str] = None,
         meta_prompt: Optional[str] = None,
         rules_meta_prompt: Optional[str] = None,

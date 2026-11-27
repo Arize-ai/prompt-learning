@@ -32,6 +32,15 @@ class TestPricingCalculator:
         assert pricing.input_price_per_1k == 0.03
         assert pricing.output_price_per_1k == 0.06
 
+    def test_default_openai_model_pricing(self):
+        """The default model has its own price, not the gpt-4 partial match."""
+        calc = PricingCalculator()
+
+        pricing = calc.get_model_pricing("gpt-5.6-sol")
+
+        assert pricing.model_name == "gpt-5.6-sol"
+        assert calc.calculate_cost("gpt-5.6-sol", 1000, 1000) == pytest.approx(0.024)
+
     def test_get_model_pricing_unknown_model(self):
         """Test getting pricing for unknown model returns fallback."""
         calc = PricingCalculator()
