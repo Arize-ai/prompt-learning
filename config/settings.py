@@ -44,7 +44,9 @@ class Settings:
                 default_model="gemini-2.5-flash",
             ),
             "openai": ProviderConfig(
-                name="openai", api_key_env_var="OPENAI_API_KEY", default_model="gpt-4"
+                name="openai",
+                api_key_env_var="OPENAI_API_KEY",
+                default_model="gpt-5.6-sol",
             ),
         }
     )

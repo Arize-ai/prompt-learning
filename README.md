@@ -72,7 +72,7 @@ prompt-learn optimize [OPTIONS]
 | `--dataset` | `-d` | **Yes** | - | Path to CSV or JSON dataset |
 | `--feedback-columns` | `-f` | **Yes** | - | Column name(s) containing feedback (comma-separated, or use -f multiple times) |
 | `--output-column` | `-o` | **Yes** | `output` | Column name containing LLM outputs |
-| `--model` | `-m` | No | `gpt-4` | Model to use for optimization |
+| `--model` | `-m` | No | `gpt-5.6-sol` | Model to use for optimization |
 | `--provider` | - | No | `openai` | Provider: `openai` or `google` |
 | `--context-size` | `-c` | No | `128000` | Context window size in tokens |
 | `--budget` | `-b` | No | `5.00` | Maximum budget in USD |
@@ -194,7 +194,7 @@ from optimizer_sdk.prompt_learning_optimizer import PromptLearningOptimizer
 
 optimizer = PromptLearningOptimizer(
     prompt="Your prompt: {input}",
-    model_choice="gpt-4"
+    model_choice="gpt-5.6-sol"
 )
 
 # Run evaluators to generate feedback
@@ -368,7 +368,7 @@ optimized_ruleset = optimizer.optimize(
 ```python
 PromptLearningOptimizer(
     prompt: Union[PromptVersion, str, List[Dict[str, str]]],
-    model_choice: str = "gpt-4",
+    model_choice: str = "gpt-5.6-sol",
     openai_api_key: Optional[str] = None,
     meta_prompt: Optional[str] = None,
     rules_meta_prompt: Optional[str] = None,
@@ -376,7 +376,7 @@ PromptLearningOptimizer(
 ```
 
 - `prompt`: The prompt to optimize. Can be a string, list of messages, or Phoenix PromptVersion.
-- `model_choice`: OpenAI model to use (default: "gpt-4")
+- `model_choice`: OpenAI model to use (default: "gpt-5.6-sol")
 - `openai_api_key`: API key (or set via `OPENAI_API_KEY` env var)
 - `meta_prompt`: Custom meta-prompt template (optional)
 - `rules_meta_prompt`: Custom meta-prompt for ruleset optimization (optional)

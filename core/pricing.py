@@ -24,6 +24,7 @@ class PricingCalculator:
         "gpt-4": ModelPricing(0.03, 0.06, "gpt-4"),
         "gpt-4-turbo": ModelPricing(0.01, 0.03, "gpt-4-turbo"),
         "gpt-3.5-turbo": ModelPricing(0.0015, 0.002, "gpt-3.5-turbo"),
+        "gpt-5.6-sol": ModelPricing(0.004, 0.02, "gpt-5.6-sol"),
         # Google Gemini models (from Google AI pricing)
         "gemini-2.5-flash": ModelPricing(0.0003, 0.0025, "gemini-2.5-flash"),
         "gemini-2.5-pro": ModelPricing(0.00125, 0.01, "gemini-2.5-pro"),
